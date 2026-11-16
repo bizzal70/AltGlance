@@ -10,9 +10,9 @@ AltGlance keeps a line on every character on your account and shows them all in 
 
 | Column | |
 |---|---|
-| Character | Name, in their class colour |
+| Character | Their faction's crest (Horde or Alliance), then their name in their class colour. The row is faintly tinted red for the Horde, blue for the Alliance |
 | Level | |
-| Gold | With a total across all characters at the bottom |
+| Gold | With a total across all characters at the bottom, and each faction's own total (gold cannot cross between them) |
 | Last seen in | The zone they were in |
 | Rested | Rested experience, as a share of a level |
 | Professions | With skill levels |

@@ -33,6 +33,8 @@ local function Stub()
         elseif k == "SetShown" then f = function(self, v) assert(type(v) == "boolean", "SetShown needs boolean"); self.__shown = v end
         elseif k == "SetText" then f = function(self, v) assert(v ~= nil, "SetText nil"); self.__text = tostring(v) end
         elseif k == "GetText" then f = function(self) return self.__text end
+        elseif k == "SetTexture" then f = function(self, v) self.__texture = v end
+        elseif k == "SetColorTexture" then f = function(self, r, g, b, alpha) self.__rgba = { r, g, b, alpha } end
         elseif k == "GetMapID" then f = function() return player.map end
         elseif k == "SetPoint" then f = function(self, ...) self.__point = { ... } end
         elseif k == "GetFrameLevel" then f = function() return 1 end

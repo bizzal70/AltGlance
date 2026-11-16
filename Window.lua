@@ -85,6 +85,15 @@ local function ClassColor(classFile)
     return 1, 1, 1
 end
 
+-- Each faction's crest (the game's own small icons) and colour: a red tint
+-- for the Horde and a blue one for the Alliance, behind the whole row.
+local FACTIONS = {
+    Horde = { icon = "Interface\\FriendsFrame\\PlusManz-Horde", r = 0.75, g = 0.12, b = 0.10 },
+    Alliance = { icon = "Interface\\FriendsFrame\\PlusManz-Alliance", r = 0.15, g = 0.35, b = 0.85 },
+}
+ns.FACTIONS = FACTIONS
+local ICON_SIZE = 16
+
 local function ProfessionText(record)
     local parts = {}
     for _, profession in ipairs(record.professions or {}) do
@@ -126,10 +135,14 @@ local function RowOnEnter(row)
     if record.level then who[#who + 1] = "Level " .. record.level end
     if record.class then who[#who + 1] = record.class end
     if #who > 0 then GameTooltip:AddLine(table.concat(who, " "), 1, 1, 1) end
-    local where = {}
-    if record.faction then where[#where + 1] = record.faction end
-    if record.realm then where[#where + 1] = record.realm end
-    if #where > 0 then GameTooltip:AddLine(table.concat(where, ", "), 0.7, 0.7, 0.7) end
+    local faction = FACTIONS[record.faction or ""]
+    if faction then
+        GameTooltip:AddLine(("|T%s:0|t %s"):format(faction.icon, record.faction),
+            math.min(1, faction.r + 0.25), math.min(1, faction.g + 0.25), math.min(1, faction.b + 0.25))
+    elseif record.faction then
+        GameTooltip:AddLine(record.faction, 0.7, 0.7, 0.7)
+    end
+    if record.realm then GameTooltip:AddLine(record.realm, 0.7, 0.7, 0.7) end
     if record.money then
         GameTooltip:AddLine(MoneyText(record.money), 1, 1, 1)
     end
@@ -158,6 +171,8 @@ local function CreateRow(index)
     if index % 2 == 0 then
         Fill(row, 1, 1, 1, 0.03)
     end
+    -- The faction's colour, faintly, behind the row.
+    row.tint = Fill(row, 1, 1, 1, 0, "BORDER")
     local hover = row:CreateTexture(nil, "HIGHLIGHT")
     hover:SetAllPoints()
     hover:SetColorTexture(1, 1, 1, 0.07)
@@ -168,12 +183,22 @@ local function CreateRow(index)
     row.stripe:SetWidth(3)
     row.stripe:SetColorTexture(ACCENT_R, ACCENT_G, ACCENT_B, 1)
 
+    -- The faction's crest, just before the name.
+    row.faction = row:CreateTexture(nil, "ARTWORK")
+    row.faction:SetSize(ICON_SIZE, ICON_SIZE)
+    row.faction:SetPoint("LEFT", 8, 0)
+
     row.cells = {}
     local x = 8
     for _, column in ipairs(COLUMNS) do
         local cell = Label(row, "GameFontHighlightSmall", column.justify)
-        cell:SetPoint("LEFT", x, 0)
-        cell:SetWidth(column.width)
+        if column.key == "name" then
+            cell:SetPoint("LEFT", x + ICON_SIZE + 4, 0)
+            cell:SetWidth(column.width - ICON_SIZE - 4)
+        else
+            cell:SetPoint("LEFT", x, 0)
+            cell:SetWidth(column.width)
+        end
         row.cells[column.key] = cell
         x = x + column.width + COLUMN_GAP
     end
@@ -230,6 +255,15 @@ local function Refresh()
                 row.cells[column.key]:SetText(CELLS[column.key](record))
             end
             row.cells.name:SetTextColor(ClassColor(record.classFile))
+            local faction = FACTIONS[record.faction or ""]
+            if faction then
+                row.faction:SetTexture(faction.icon)
+                row.faction:Show()
+                row.tint:SetColorTexture(faction.r, faction.g, faction.b, 0.16)
+            else
+                row.faction:Hide()
+                row.tint:SetColorTexture(1, 1, 1, 0)
+            end
             row.stripe:SetShown(record.isCurrent)
             -- The character being played cannot be removed; it would only
             -- be recorded again straight away.
@@ -251,7 +285,23 @@ local function Refresh()
     end
 
     emptyLabel:SetShown(#list == 0)
-    footerLabel:SetText(("%d character%s      Total: %s"):format(#list, #list == 1 and "" or "s", MoneyText(total)))
+    -- Gold cannot cross between the factions, so each one's total is shown
+    -- as well, behind its crest.
+    local count, gold = {}, {}
+    for _, record in ipairs(list) do
+        local key = FACTIONS[record.faction or ""] and record.faction or nil
+        if key then
+            count[key] = (count[key] or 0) + 1
+            gold[key] = (gold[key] or 0) + (record.money or 0)
+        end
+    end
+    local text = ("%d character%s      Total: %s"):format(#list, #list == 1 and "" or "s", MoneyText(total))
+    for _, key in ipairs({ "Horde", "Alliance" }) do
+        if count[key] then
+            text = text .. ("      |T%s:0|t %s %d: %s"):format(FACTIONS[key].icon, key, count[key], MoneyText(gold[key]))
+        end
+    end
+    footerLabel:SetText(text)
 end
 
 local function SortBy(key)
@@ -353,7 +403,7 @@ local function CreateWindow()
     footerLabel:SetPoint("LEFT", PADDING, 0)
     local hint = Label(footer, "GameFontDisableSmall", "RIGHT")
     hint:SetPoint("RIGHT", -PADDING, 0)
-    hint:SetText("Each character updates when you play them. Click a heading to sort.")
+    hint:SetText("Click a heading to sort.")
 
     window:EnableMouseWheel(true)
     window:SetScript("OnMouseWheel", function(_, delta)

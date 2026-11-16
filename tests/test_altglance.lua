@@ -1,4 +1,6 @@
 -- The game's side: whichever character is logged in.
+-- Each character's faction (Alliance unless set).
+UnitFactionGroup = function() return ME.faction or "Alliance" end
 ME = {
     guid = "Player-1", name = "Mirabel", class = "Mage", classFile = "MAGE", level = 12, money = 23456,
     zone = "Elwynn Forest", xp = 500, xpMax = 2000, rested = 400, resting = true,
@@ -80,7 +82,7 @@ ME.money = 30000; Fire("PLAYER_MONEY")
 
 -- a second and third character
 ME = {
-    guid = "Player-2", name = "Tolan", class = "Hunter", classFile = "HUNTER", level = 10, money = 500,
+    guid = "Player-2", name = "Tolan", class = "Hunter", classFile = "HUNTER", level = 10, money = 500, faction = "Horde",
     zone = "Dun Morogh", xp = 0, xpMax = 1000, rested = 0, resting = false, professions = {},
     bags = { [0] = { 16, 16 }, { 0, 0 }, { 0, 0 }, { 0, 0 }, { 0, 0 } },
 }
@@ -127,6 +129,20 @@ check(shown[1].cells.seen.__text == "now" and shown[2].cells.seen.__text == "2 h
 check(shown[1].cells.money.__text == "100g" and shown[3].cells.money.__text == "5s", "and their money")
 check(shown[2].cells.rested.__text:sub(1, 1) == "~", "an estimated rested figure is marked as approximate")
 for _, row in ipairs(shown) do row.__scripts.OnEnter(row) end
+
+-- Horde or Alliance at a glance: the faction's crest before the name, the
+-- row faintly tinted red or blue, and each faction's gold in the footer.
+check(shown[1].faction.__texture:find("PlusManz%-Alliance") and shown[3].faction.__texture:find("PlusManz%-Horde"),
+    "each row shows its faction's crest")
+check(shown[3].tint.__rgba[1] > shown[3].tint.__rgba[3] and shown[1].tint.__rgba[3] > shown[1].tint.__rgba[1],
+    "and is tinted red for the Horde, blue for the Alliance")
+local footer
+for _, f in ipairs(Frames()) do
+    local text = rawget(f, "__text")
+    if text and text:find("Total:", 1, true) then footer = text end
+end
+check(footer and footer:find("Horde 1: 5s", 1, true) and footer:find("Alliance 2: 103g", 1, true),
+    "the footer shows each faction's characters and gold, which cannot cross factions: " .. tostring(footer))
 
 -- sorting by clicking a heading
 local headings = {}
