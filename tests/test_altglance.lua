@@ -158,6 +158,14 @@ check(list[1].name == "Tolan", "clicking it again reverses the order")
 headings.money.__scripts.OnClick(headings.money)
 list = ns.Characters()
 check(list[1].name == "Aaron" and list[3].name == "Tolan", "clicking Gold sorts richest first")
+headings.faction.__scripts.OnClick(headings.faction)
+list = ns.Characters()
+check(ns.db.sortBy == "faction" and list[1].name == "Aaron" and list[2].name == "Mirabel" and list[3].name == "Tolan",
+    "clicking Faction groups the Alliance first, highest level first within it")
+headings.faction.__scripts.OnClick(headings.faction)
+list = ns.Characters()
+check(list[1].name == "Tolan" and list[2].name == "Aaron" and list[3].name == "Mirabel",
+    "clicking it again puts the Horde first, still highest level first within each faction")
 for key, heading in pairs(headings) do heading.__scripts.OnClick(heading) end
 check(true, "every sortable heading sorts without error")
 

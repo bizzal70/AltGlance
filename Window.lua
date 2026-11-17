@@ -11,7 +11,8 @@ local PADDING = 12
 
 -- Columns, left to right. A column with a sort key sorts when clicked.
 local COLUMNS = {
-    { key = "name", label = "Character", width = 160, sort = "name" },
+    { key = "faction", label = "Faction", width = 44, sort = "faction", justify = "CENTER" },
+    { key = "name", label = "Character", width = 140, sort = "name" },
     { key = "level", label = "Level", width = 44, sort = "level", justify = "RIGHT" },
     { key = "money", label = "Gold", width = 112, sort = "money", justify = "RIGHT" },
     { key = "zone", label = "Last seen in", width = 150, sort = "zone" },
@@ -110,7 +111,9 @@ local function RestedText(record)
 end
 
 local CELLS = {
-    name = function(record) return record.name or "?" end,
+    -- The faction column shows the crest (row.faction), no text.
+    faction = function() return "" end,
+    name =function(record) return record.name or "?" end,
     level = function(record) return record.level and tostring(record.level) or "" end,
     money = function(record) return record.money and MoneyText(record.money) or "" end,
     zone = function(record) return record.zone or "" end,
@@ -183,22 +186,17 @@ local function CreateRow(index)
     row.stripe:SetWidth(3)
     row.stripe:SetColorTexture(ACCENT_R, ACCENT_G, ACCENT_B, 1)
 
-    -- The faction's crest, just before the name.
+    -- The faction's crest, centred in the Faction column.
     row.faction = row:CreateTexture(nil, "ARTWORK")
     row.faction:SetSize(ICON_SIZE, ICON_SIZE)
-    row.faction:SetPoint("LEFT", 8, 0)
+    row.faction:SetPoint("LEFT", 8 + (COLUMNS[1].width - ICON_SIZE) / 2, 0)
 
     row.cells = {}
     local x = 8
     for _, column in ipairs(COLUMNS) do
         local cell = Label(row, "GameFontHighlightSmall", column.justify)
-        if column.key == "name" then
-            cell:SetPoint("LEFT", x + ICON_SIZE + 4, 0)
-            cell:SetWidth(column.width - ICON_SIZE - 4)
-        else
-            cell:SetPoint("LEFT", x, 0)
-            cell:SetWidth(column.width)
-        end
+        cell:SetPoint("LEFT", x, 0)
+        cell:SetWidth(column.width)
         row.cells[column.key] = cell
         x = x + column.width + COLUMN_GAP
     end
@@ -308,9 +306,9 @@ local function SortBy(key)
     if ns.db.sortBy == key then
         ns.db.sortDescending = not ns.db.sortDescending
     else
-        -- Names and zones read best A to Z; numbers, biggest first.
+        -- Names, zones and factions read best A to Z; numbers, biggest first.
         ns.db.sortBy = key
-        ns.db.sortDescending = not (key == "name" or key == "zone")
+        ns.db.sortDescending = not (key == "name" or key == "zone" or key == "faction")
     end
     offset = 0
     Refresh()

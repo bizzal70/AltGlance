@@ -166,6 +166,7 @@ function ns.Rested(record, isCurrent)
 end
 
 local SORTS = {
+    faction = function(record) return record.faction or "" end,
     name = function(record) return (record.name or ""):lower() end,
     level = function(record) return record.level or 0 end,
     money = function(record) return record.money or 0 end,
@@ -189,11 +190,16 @@ function ns.Characters()
     end
     local value = SORTS[ns.db.sortBy] or SORTS.level
     local descending = ns.db.sortDescending
+    local byFaction = ns.db.sortBy == "faction"
     table.sort(list, function(a, b)
         local va, vb = value(a), value(b)
         if va ~= vb then
             if descending then return va > vb end
             return va < vb
+        end
+        -- Within a faction: highest level first, whichever faction leads.
+        if byFaction and (a.level or 0) ~= (b.level or 0) then
+            return (a.level or 0) > (b.level or 0)
         end
         -- Same in the sorted column: by name, so the order is steady.
         return (a.name or "") < (b.name or "")
