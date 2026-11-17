@@ -1,5 +1,9 @@
 # AltGlance
 
+## 0.6.3
+
+- A **Bank alt** column in the list: tick a character to make them the bank alt for their realm and faction (the one ticked before is unticked), untick to clear. Works from any character, whenever you change your mind; the mailbox panel and `/alts bank` still work too.
+
 ## 0.6.2
 
 - The Send materials panel is tidier and easier to read: wider, so full names fit; headings for Send to and What to send; a coloured box and On or Off on each kind; a short Make this my bank alt button (it turned green as Your bank alt); and the stacks and mails to send on their own line above a larger Send button, no longer hidden behind the last row.

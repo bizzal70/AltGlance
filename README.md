@@ -17,6 +17,7 @@ AltGlance keeps a line on every character on your account and shows them all in 
 | Last seen in | The zone they were in |
 | Rested | Rested experience, as a share of a level |
 | Professions | With skill levels |
+| Bank alt | A tick box: tick the character whose name the mailbox fills in (one per realm and faction), untick to clear |
 | Bags free | Free slots out of total |
 | Played | How long since you last played them |
 

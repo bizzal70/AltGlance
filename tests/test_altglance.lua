@@ -349,6 +349,23 @@ check(not panel:IsShown(), "closing the mailbox hides the panel")
 ME.items = nil; ME.bags[1] = { 8, 2 }
 GetMoney = function() return ME.money end
 
+-- The Bank alt column in the list: tick to choose, untick to clear.
+SlashCmdList.ALTGLANCE("bank off")
+local wasShown = AltGlanceWindow:IsShown()
+if not wasShown then ns.ToggleWindow() end
+local mirabelRow
+for _, f in ipairs(Frames()) do
+    if rawget(f, "bank") and rawget(f, "record") and f.record.key == "Player-1" and f.__shown then mirabelRow = f end
+end
+check(mirabelRow and not mirabelRow.bank.tick.__shown, "each row has a Bank alt tick box, unticked")
+mirabelRow.bank.__scripts.OnClick(mirabelRow.bank)
+check(ns.BankAlt() == "Player-1" and mirabelRow.bank.tick.__shown, "ticking it makes that character the bank alt")
+mirabelRow.bank.__scripts.OnEnter(mirabelRow.bank)
+mirabelRow.bank.__scripts.OnClick(mirabelRow.bank)
+check(ns.BankAlt() == nil and not mirabelRow.bank.tick.__shown, "unticking it clears the bank alt")
+mirabelRow.bank.__scripts.OnClick(mirabelRow.bank)
+if not wasShown then ns.ToggleWindow() end
+
 -- sorting by clicking a heading
 local headings = {}
 for _, f in ipairs(Frames()) do

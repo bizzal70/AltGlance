@@ -12,7 +12,8 @@ local PADDING = 12
 -- Columns, left to right. A column with a sort key sorts when clicked.
 local COLUMNS = {
     { key = "faction", label = "Faction", width = 44, sort = "faction", justify = "CENTER" },
-    { key = "name", label = "Character", width = 140, sort = "name" },
+    { key = "name", label = "Character", width = 150, sort = "name" },
+    { key = "bank", label = "Bank alt", width = 52, justify = "CENTER" },
     { key = "level", label = "Level", width = 44, sort = "level", justify = "RIGHT" },
     { key = "money", label = "Gold", width = 112, sort = "money", justify = "RIGHT" },
     { key = "zone", label = "Last seen in", width = 150, sort = "zone" },
@@ -113,6 +114,8 @@ end
 local CELLS = {
     -- The faction column shows the crest (row.faction), no text.
     faction = function() return "" end,
+    -- The Bank alt column shows a tick box (row.bank), no text.
+    bank = function() return "" end,
     name = function(record) return ns.DisplayName(record) end,
     level = function(record) return record.level and tostring(record.level) or "" end,
     money = function(record) return record.money and MoneyText(record.money) or "" end,
@@ -198,6 +201,40 @@ local function CreateRow(index)
         cell:SetPoint("LEFT", x, 0)
         cell:SetWidth(column.width)
         row.cells[column.key] = cell
+        if column.key == "bank" then
+            -- A tick box: ticked for this realm and faction's bank alt.
+            local box = CreateFrame("Button", nil, row)
+            box:SetSize(18, 18)
+            box:SetPoint("LEFT", x + (column.width - 18) / 2, 0)
+            Fill(box, ACCENT_R, ACCENT_G, ACCENT_B, 0.7)
+            local inside = box:CreateTexture(nil, "BORDER")
+            inside:SetPoint("TOPLEFT", 1, -1)
+            inside:SetPoint("BOTTOMRIGHT", -1, 1)
+            inside:SetColorTexture(0.08, 0.08, 0.09, 1)
+            box.tick = box:CreateTexture(nil, "ARTWORK")
+            box.tick:SetPoint("TOPLEFT", 4, -4)
+            box.tick:SetPoint("BOTTOMRIGHT", -4, 4)
+            box.tick:SetColorTexture(0.4, 0.9, 0.4, 1)
+            local glow = box:CreateTexture(nil, "HIGHLIGHT")
+            glow:SetAllPoints()
+            glow:SetColorTexture(1, 1, 1, 0.15)
+            box:SetScript("OnClick", function(self)
+                local record = row.record
+                if record then ns.ToggleBankAlt(record.key) end
+            end)
+            box:SetScript("OnEnter", function(self)
+                local record = row.record
+                GameTooltip:SetOwner(self, "ANCHOR_RIGHT")
+                GameTooltip:AddLine("Bank alt", 1, 1, 1)
+                GameTooltip:AddLine(("The character whose name the mailbox fills in, for %s on this realm. Click to %s."):format(
+                    record and record.faction or "their faction",
+                    record and ns.IsBankAlt(record.key) and "clear it" or "make " .. (record and ns.DisplayName(record) or "them") .. " the bank alt"),
+                    0.8, 0.8, 0.8, true)
+                GameTooltip:Show()
+            end)
+            box:SetScript("OnLeave", function() GameTooltip:Hide() end)
+            row.bank = box
+        end
         x = x + column.width + COLUMN_GAP
     end
 
@@ -263,6 +300,7 @@ local function Refresh()
                 row.tint:SetColorTexture(1, 1, 1, 0)
             end
             row.stripe:SetShown(record.isCurrent)
+            row.bank.tick:SetShown(ns.IsBankAlt and ns.IsBankAlt(record.key) or false)
             -- The character being played cannot be removed; it would only
             -- be recorded again straight away.
             row.remove:SetShown(not record.isCurrent)

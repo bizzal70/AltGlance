@@ -99,6 +99,13 @@ function ns.BankAlt()
     return key, record
 end
 
+-- Whether a character is the bank alt for their realm and faction.
+function ns.IsBankAlt(key)
+    Settings()
+    local record = key and ns.db.chars[key]
+    return record ~= nil and ns.db.bankAlt[Group(record)] == key
+end
+
 -- Makes a character the bank alt for their realm and faction, or, given
 -- the current bank alt, clears it.
 function ns.ToggleBankAlt(key)
@@ -108,13 +115,18 @@ function ns.ToggleBankAlt(key)
     local group = Group(record)
     if ns.db.bankAlt[group] == key then
         ns.db.bankAlt[group] = nil
-        ns.Print(record.fullName .. " is no longer your bank alt.")
+        ns.Print(ns.DisplayName(record) .. " is no longer your bank alt.")
     else
         ns.db.bankAlt[group] = key
-        ns.db.mailTo[ns.CurrentKey() or ""] = key
-        ns.Print(record.fullName .. " is now your bank alt: their name is filled in when you open Send Mail.")
+        if ns.CurrentKey() ~= key then ns.db.mailTo[ns.CurrentKey() or ""] = key end
+        if record.fullName then
+            ns.Print(record.fullName .. " is now your bank alt: their name is filled in when you open Send Mail.")
+        else
+            ns.Print(ns.DisplayName(record) .. " is now your bank alt. Log in to them once so AltGlance learns their full name; until then it is not filled in.")
+        end
         ns.FillBankAltName()
     end
+    if ns.RefreshWindow then ns.RefreshWindow() end
 end
 
 -- Puts the bank alt's name in the Send Mail "To" box, if it is empty.
