@@ -220,6 +220,107 @@ end
 check(footer and footer:find("Horde 1: 5s", 1, true) and footer:find("Alliance 2: 103g", 1, true),
     "the footer shows each faction's characters and gold, which cannot cross factions: " .. tostring(footer))
 
+-- Send materials at the mailbox, and the bank alt. Aaron (Alliance) is
+-- being played; Mirabel is Alliance on the same realm, Tolan is Horde.
+local CATEGORY = { [1000] = { 2, 7 }, [1001] = { 4, 2 }, [1002] = { 4, 1 }, [2770] = { 7, 7 }, [2771] = { 7, 7 }, [765] = { 7, 9 }, [2318] = { 7, 6 }, [2589] = { 7, 5 }, [117] = { 0, 5 } }
+C_Item = C_Item or {}
+C_Item.GetItemInfoInstant = function(id) local c = CATEGORY[id]; if c then return id, "", "", "", 0, c[1], c[2] end end
+ITEM_NAMES[2318], ITEM_NAMES[117] = "Light Leather", "Tough Jerky"
+ITEM_NAMES[1000], ITEM_NAMES[1001], ITEM_NAMES[1002] = "Green Sword", "Blue Vest", "Grey Boots"
+C_Container.GetContainerItemInfo = function(bag, slot)
+    local item = ME.items and ME.items[bag] and ME.items[bag][slot]
+    if not item then return nil end
+    return { itemID = item[1], stackCount = item[2], isBound = item.bound, quality = item.quality,
+        hyperlink = "|cffffffff|Hitem:" .. item[1] .. "::|h[" .. ITEM_NAMES[item[1]] .. "]|h|r" }
+end
+local cursor, attached, sentMails, timers = nil, {}, {}, {}
+C_Container.PickupContainerItem = function(bag, slot) cursor = { bag = bag, slot = slot } end
+ClickSendMailItemButton = function(index) if cursor then attached[index] = cursor; cursor = nil end end
+CursorHasItem = function() return cursor ~= nil end
+ClearCursor = function() cursor = nil end
+GetSendMailItem = function(index) if attached[index] then return "item" end end
+GetSendMailPrice = function() local n = 0; for _ in pairs(attached) do n = n + 1 end; return 30 * n end
+SendMail = function(to, subject)
+    local stacks = 0
+    for _, a in pairs(attached) do ME.items[a.bag][a.slot] = nil; stacks = stacks + 1 end
+    sentMails[#sentMails + 1] = { to = to, subject = subject, stacks = stacks }
+    attached = {}
+end
+C_Timer = { After = function(_, fn) timers[#timers + 1] = fn end }
+local function RunTimers() local t = timers; timers = {}; for _, fn in ipairs(t) do fn() end end
+local nameBox = { text = "" }
+function nameBox:GetText() return self.text end
+function nameBox:SetText(t) self.text = t end
+SendMailNameEditBox = nameBox
+ME.bags[1] = { 16, 0 }
+ME.items = { [0] = { { 2770, 20 }, { 765, 5 }, { 2318, 8 }, { 2589, 10 }, { 117, 4 }, { 2770, 20, bound = true } }, [1] = {} }
+for slot = 1, 10 do ME.items[1][slot] = { 2771, 5 } end
+Fire("BAG_UPDATE_DELAYED")
+Fire("MAIL_SHOW")
+local panel = ns.mailPanel
+check(panel and panel:IsShown(), "opening the mailbox shows the Send materials panel")
+local list = ns.MailRecipients()
+check(#list == 1 and list[1].record.name == "Mirabel", "only characters this one can mail are offered: same realm and faction")
+check(#ns.MaterialsToSend() == 14, "ore, herbs, leather and cloth are picked up; food and soulbound items are not")
+panel.toggles.cloth.__scripts.OnClick(panel.toggles.cloth)
+check(#ns.MaterialsToSend() == 13 and not ns.db.mailKinds.cloth, "a kind can be turned off")
+check(nameBox.text == "", "with no bank alt, the To box is left empty")
+-- Making Mirabel the bank alt fills in the To box.
+panel.bank.__scripts.OnClick(panel.bank)
+check(ns.BankAlt() == "Player-1" and nameBox.text == "Mirabel", "Make Mirabel my bank alt fills her name in on Send Mail")
+-- Sending: 12 stacks a mail, the rest after the first has gone.
+GetMoney = function() return 100000 end
+panel.send.__scripts.OnClick(panel.send)
+check(#sentMails == 1 and sentMails[1].to == "Mirabel" and sentMails[1].stacks == 12 and sentMails[1].subject == "Materials", "Send mails the first 12 stacks to Mirabel")
+Fire("MAIL_SEND_SUCCESS"); RunTimers()
+check(#sentMails == 2 and sentMails[2].stacks == 1, "then the rest once the first has gone")
+
+Fire("MAIL_SEND_SUCCESS"); RunTimers()
+check(#sentMails == 2 and printed[#printed]:find("Sent 13 stacks in 2 mails to Mirabel", 1, true), "and says what was sent: " .. tostring(printed[#printed]))
+check(ME.items[0][4] ~= nil and ME.items[0][6] ~= nil, "the cloth (turned off) and the soulbound ore stay")
+-- After an ordinary mail the To box is filled in again.
+nameBox.text = ""
+Fire("MAIL_SEND_SUCCESS"); RunTimers()
+check(nameBox.text == "Mirabel", "after a mail is sent, the bank alt's name is filled in again")
+nameBox.text = "Someone"
+Fire("MAIL_SHOW")
+check(nameBox.text == "Someone", "a name you typed is never replaced")
+-- Not enough money for postage: nothing goes.
+panel.toggles.cloth.__scripts.OnClick(panel.toggles.cloth)
+GetMoney = function() return 10 end
+panel.send.__scripts.OnClick(panel.send)
+check(#sentMails == 2 and printed[#printed]:find("Not enough money for the postage", 1, true), "without money for postage nothing is sent")
+attached = {}
+-- Something already on the mail: it waits.
+GetMoney = function() return 100000 end
+attached[1] = { bag = 0, slot = 4 }
+panel.send.__scripts.OnClick(panel.send)
+check(#sentMails == 2 and printed[#printed]:find("already has items on it", 1, true), "a mail already being written is not touched")
+attached = {}
+-- /alts bank
+SlashCmdList.ALTGLANCE("bank")
+check(printed[#printed]:find("Mirabel is your bank alt", 1, true), "/alts bank says who the bank alt is")
+SlashCmdList.ALTGLANCE("bank tol")
+check(printed[#printed]:find("another realm or faction", 1, true) and ns.BankAlt() == "Player-1", "a character of the other faction cannot be the bank alt")
+SlashCmdList.ALTGLANCE("bank off")
+check(ns.BankAlt() == nil, "/alts bank off clears it")
+SlashCmdList.ALTGLANCE("bank mira")
+check(ns.BankAlt() == "Player-1", "/alts bank <name> sets it")
+-- Gear to disenchant: off until turned on; then green to purple gear not yet soulbound.
+ME.items[0] = { { 1000, 1, quality = 2 }, { 1001, 1, quality = 3, bound = true }, { 1002, 1, quality = 0 } }
+ME.items[1] = {}
+check(#ns.MaterialsToSend() == 0 and not ns.db.mailKinds.disenchant, "gear is never sent unless Gear to disenchant is turned on")
+panel.toggles.disenchant.__scripts.OnClick(panel.toggles.disenchant)
+local gearList = ns.MaterialsToSend()
+check(#gearList == 1 and gearList[1].id == 1000, "turned on: green, blue and purple gear not yet soulbound; not bound gear, not grey")
+panel.send.__scripts.OnClick(panel.send)
+check(#sentMails == 3 and sentMails[3].to == "Mirabel" and sentMails[3].stacks == 1, "and it is mailed to the bank alt")
+Fire("MAIL_SEND_SUCCESS"); RunTimers()
+Fire("MAIL_CLOSED")
+check(not panel:IsShown(), "closing the mailbox hides the panel")
+ME.items = nil; ME.bags[1] = { 8, 2 }
+GetMoney = function() return ME.money end
+
 -- sorting by clicking a heading
 local headings = {}
 for _, f in ipairs(Frames()) do

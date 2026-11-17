@@ -1,5 +1,11 @@
 # AltGlance
 
+## 0.6.0
+
+- **Send materials:** opening a mailbox shows a panel beside it that mails your ore and stone, herbs, leather and cloth to another of your characters on the same realm and faction, 12 stacks a mail, one after another until all are sent. Pick who with the < and > buttons, turn each kind on or off, then press Send. Soulbound items, food and everything else stay in your bags. Made to be easy with a gamepad or touchscreen.
+- **Gear to disenchant:** a fifth kind on that panel, off until you turn it on: green, blue and purple weapons and armour that are not soulbound yet, for a bank alt who disenchants.
+- **Bank alt:** mark one character as your bank alt (the button on that panel, or `/alts bank <name>`), and their name is filled in on the Send Mail page whenever its To box is empty, so you need not type it. `/alts bank off` clears it.
+
 ## 0.5.0
 
 - **On your characters:** hover over any item and its tooltip lists how many each of your characters has, in their bags and in their bank, with a total. Bags are counted as you play each character; a bank is counted when that character opens it.

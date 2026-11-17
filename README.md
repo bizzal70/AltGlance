@@ -33,6 +33,7 @@ A character appears in the list once you have logged in to them with AltGlance e
 | `/alts` | Open the list |
 | `/alts find <item>` | Which of your characters has an item, in bags or bank: `/alts find linen` |
 | `/alts tooltip` | Item tooltips showing each character's count, on or off |
+| `/alts bank <name>` | Your bank alt, whose name the mailbox fills in (`/alts bank off` to clear) |
 | `/alts forget <name>` | Remove a character you no longer have |
 | `/alts button` | Show or hide the minimap button |
 
@@ -53,6 +54,20 @@ Each character is shown with their faction's crest, in their class colour, most 
 - **Bags** are counted whenever they change while you play a character.
 - **The bank** can only be read while it is open, so each character's bank is counted the first time they open it with AltGlance 0.5.0 or later, and kept up to date each time after.
 - Mail and items you are wearing are not counted.
+
+## Send materials to an alt
+
+Open any mailbox and a **Send materials** panel appears beside it:
+
+1. **To:** step through your other characters on the same realm and faction with **<** and **>** (mail cannot cross factions). It starts on your bank alt, or whoever you sent to last.
+2. **What:** turn each kind on or off: **Ore & stone**, **Herbs**, **Leather**, **Cloth**, and **Gear to disenchant** (green, blue and purple weapons and armour that are not soulbound yet; off until you turn it on).
+3. **Send:** everything chosen is mailed, 12 stacks a mail (the game's limit), one mail after another until all of it is on its way. Chat says what went. You pay the usual postage.
+
+Soulbound items, food and everything else stay in your bags. Every button is big enough to tap, and works with a gamepad.
+
+### Your bank alt
+
+Press **Make (name) my bank alt** on the panel, or type `/alts bank <name>`, and that character's name is filled in on the mailbox's **Send Mail** page whenever its To box is empty, so you never have to type it. It is filled in again after each mail you send. One bank alt per realm and faction; `/alts bank off` clears it. A name you have typed yourself is never replaced.
 
 ## Good to know
 

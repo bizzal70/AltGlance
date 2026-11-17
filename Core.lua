@@ -243,6 +243,31 @@ SlashCmdList.ALTGLANCE = function(msg)
         ns.Print("Minimap button " .. (ns.db.minimapButton and "shown." or "hidden."))
     elseif command == "find" then
         ns.PrintFind(rest)
+    elseif command == "bank" then
+        if rest == "" then
+            local _, record = ns.BankAlt()
+            ns.Print(record and (record.name .. " is your bank alt here. /alts bank off to clear it.")
+                or "No bank alt for this realm and faction. /alts bank <name> to choose one.")
+        elseif rest:lower() == "off" then
+            local key = ns.BankAlt()
+            if key then ns.ToggleBankAlt(key) else ns.Print("There is no bank alt to clear.") end
+        else
+            local key, problem = FindByName(rest)
+            if not key then
+                ns.Print("No bank alt set: " .. problem .. ".")
+            elseif key == ns.CurrentKey() then
+                ns.Print("That is the character you are playing; choose the one you send things to.")
+            elseif key == ns.BankAlt() then
+                ns.Print(ns.db.chars[key].name .. " is already your bank alt.")
+            else
+                local mine, theirs = ns.db.chars[ns.CurrentKey() or ""], ns.db.chars[key]
+                if mine and (mine.realm ~= theirs.realm or mine.faction ~= theirs.faction) then
+                    ns.Print(theirs.name .. " is on another realm or faction, so they cannot be mailed from here.")
+                else
+                    ns.ToggleBankAlt(key)
+                end
+            end
+        end
     elseif command == "tooltip" then
         ns.db.itemTooltip = not ns.db.itemTooltip
         ns.Print("Item tooltips " .. (ns.db.itemTooltip and "show" or "no longer show") .. " how many of the item each character has.")
@@ -260,6 +285,7 @@ SlashCmdList.ALTGLANCE = function(msg)
         ns.Print("/alts - open the list of your characters")
         ns.Print("/alts find <item> - which of your characters has an item, in bags or bank")
         ns.Print("/alts tooltip - item tooltips showing each character's count, on or off")
+        ns.Print("/alts bank <name> - your bank alt, whose name the mailbox fills in (/alts bank off to clear)")
         ns.Print("/alts forget <name> - remove a character you no longer have")
         ns.Print("/alts button - show or hide the minimap button")
     end
