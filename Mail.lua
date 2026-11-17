@@ -267,6 +267,10 @@ end
 
 local panel
 
+-- Layout, top to bottom (pixels). Every button is at least 26 high, to tap.
+local WIDTH, PAD = 264, 12
+local INNER = WIDTH - PAD * 2
+
 local function Fill(frame, r, g, b, a, layer)
     local texture = frame:CreateTexture(nil, layer or "BACKGROUND")
     texture:SetAllPoints()
@@ -274,10 +278,36 @@ local function Fill(frame, r, g, b, a, layer)
     return texture
 end
 
+-- A one-pixel frame round the panel, in the accent colour.
+local function Outline(frame, alpha)
+    for _, side in ipairs({ { "TOPLEFT", "TOPRIGHT" }, { "BOTTOMLEFT", "BOTTOMRIGHT" },
+            { "TOPLEFT", "BOTTOMLEFT" }, { "TOPRIGHT", "BOTTOMRIGHT" } }) do
+        local edge = frame:CreateTexture(nil, "BORDER")
+        edge:SetColorTexture(ACCENT_R, ACCENT_G, ACCENT_B, alpha)
+        edge:SetPoint(side[1])
+        edge:SetPoint(side[2])
+        if side[1] == "TOPLEFT" and side[2] == "BOTTOMLEFT" or side[1] == "TOPRIGHT" then
+            edge:SetWidth(1)
+        else
+            edge:SetHeight(1)
+        end
+    end
+end
+
 local function Label(parent, font, justify)
     local label = parent:CreateFontString(nil, "OVERLAY", font or "GameFontHighlight")
     label:SetJustifyH(justify or "LEFT")
+    label:SetWordWrap(false)
     return label
+end
+
+-- A small heading over each part of the panel.
+local function Heading(text, y)
+    local heading = Label(panel, "GameFontNormalSmall")
+    heading:SetPoint("TOPLEFT", PAD, y)
+    heading:SetText(text)
+    heading:SetTextColor(ACCENT_R, ACCENT_G, ACCENT_B, 0.85)
+    return heading
 end
 
 -- A plain button, big enough to tap: a dark box that lights up under the
@@ -285,12 +315,13 @@ end
 local function Button(parent, width, height, text, onClick)
     local button = CreateFrame("Button", nil, parent)
     button:SetSize(width, height)
-    button.bg = Fill(button, 0.16, 0.12, 0.08, 1)
+    button.bg = Fill(button, 0.14, 0.11, 0.08, 1)
     local hover = button:CreateTexture(nil, "HIGHLIGHT")
     hover:SetAllPoints()
-    hover:SetColorTexture(1, 1, 1, 0.1)
+    hover:SetColorTexture(1, 1, 1, 0.08)
     button.label = Label(button, "GameFontHighlight", "CENTER")
-    button.label:SetPoint("CENTER")
+    button.label:SetPoint("LEFT", 8, 0)
+    button.label:SetPoint("RIGHT", -8, 0)
     button.label:SetText(text)
     button:SetScript("OnClick", onClick)
     return button
@@ -302,6 +333,10 @@ local function ClassColour(classFile)
     return 1, 1, 1
 end
 
+local function Plural(count, word)
+    return ("%d %s%s"):format(count, word, count == 1 and "" or "s")
+end
+
 function ns.RefreshMailPanel()
     if not panel or not panel:IsShown() then return end
     local target, list = ns.MailTarget()
@@ -309,101 +344,129 @@ function ns.RefreshMailPanel()
         panel.target:SetText(target.record.fullName)
         panel.target:SetTextColor(ClassColour(target.record.classFile))
     else
-        panel.target:SetText("No one yet: log in to an alt once")
+        panel.target:SetText("No alt to send to yet")
         panel.target:SetTextColor(0.6, 0.6, 0.6)
     end
     panel.prev:SetShown(#list > 1)
     panel.next:SetShown(#list > 1)
-    local bankKey = ns.BankAlt()
+
+    -- Bank alt: short, as the name is already shown just above.
     panel.bank:SetShown(target ~= nil)
-    if target and target.key == bankKey then
-        panel.bank.label:SetText(target.record.fullName .. " is your bank alt")
-        panel.bank.label:SetTextColor(0.3, 0.9, 0.3)
+    if target and target.key == ns.BankAlt() then
+        panel.bank.label:SetText("Your bank alt")
+        panel.bank.label:SetTextColor(0.4, 0.9, 0.4)
+        panel.bank.bg:SetColorTexture(0.10, 0.20, 0.10, 1)
     elseif target then
-        panel.bank.label:SetText("Make " .. target.record.fullName .. " my bank alt")
-        panel.bank.label:SetTextColor(1, 1, 1)
+        panel.bank.label:SetText("Make this my bank alt")
+        panel.bank.label:SetTextColor(0.9, 0.9, 0.9)
+        panel.bank.bg:SetColorTexture(0.14, 0.11, 0.08, 1)
     end
+
     for _, kind in ipairs(ns.MAIL_KINDS) do
         local toggle = panel.toggles[kind.key]
-        local on = ns.db.mailKinds[kind.key]
-        toggle.state:SetText(on and "on" or "off")
-        toggle.state:SetTextColor(on and 0.3 or 0.6, on and 0.9 or 0.6, on and 0.3 or 0.6)
+        local on = ns.db.mailKinds[kind.key] and true or false
+        toggle.box:SetColorTexture(on and 0.35 or 0.22, on and 0.8 or 0.22, on and 0.35 or 0.22, 1)
+        toggle.label:SetTextColor(on and 1 or 0.55, on and 1 or 0.55, on and 1 or 0.55)
+        toggle.state:SetText(on and "On" or "Off")
+        toggle.state:SetTextColor(on and 0.4 or 0.5, on and 0.9 or 0.5, on and 0.4 or 0.5)
     end
-    local items = ns.MaterialsToSend()
-    local stacks = #items
+
+    local stacks = #ns.MaterialsToSend()
     local mails = math.ceil(stacks / PER_MAIL)
     if sending then
         panel.summary:SetText("Sending...")
+    elseif not target then
+        panel.summary:SetText("Log in to an alt once, and they appear here.")
     elseif stacks == 0 then
-        panel.summary:SetText("Nothing to send.")
+        panel.summary:SetText("Nothing to send in your bags.")
     else
-        panel.summary:SetText(("%d stack%s: %d mail%s"):format(stacks, stacks == 1 and "" or "s", mails, mails == 1 and "" or "s"))
+        panel.summary:SetText(Plural(stacks, "stack") .. " in " .. Plural(mails, "mail"))
     end
-    panel.send:SetEnabled(target ~= nil and stacks > 0 and not sending)
-    panel.send.label:SetText(target and ("Send to " .. target.record.fullName) or "Send")
+    local ready = target ~= nil and stacks > 0 and not sending
+    panel.send:SetEnabled(ready)
+    panel.send.label:SetText(sending and "Sending..." or "Send")
+    panel.send.label:SetTextColor(ready and 1 or 0.5, ready and 0.95 or 0.5, ready and 0.85 or 0.5)
+    panel.send.bg:SetColorTexture(ready and 0.45 or 0.14, ready and 0.30 or 0.11, ready and 0.12 or 0.08, 1)
 end
 
 local function CreatePanel()
     panel = CreateFrame("Frame", addonName .. "MailPanel", MailFrame or UIParent)
-    panel:SetSize(220, 310)
     if MailFrame then
-        panel:SetPoint("TOPLEFT", MailFrame, "TOPRIGHT", 4, 0)
+        panel:SetPoint("TOPLEFT", MailFrame, "TOPRIGHT", 6, 0)
     else
         panel:SetPoint("CENTER")
     end
     panel:EnableMouse(true)
-    Fill(panel, 0.05, 0.05, 0.06, 0.95)
+    Fill(panel, 0.06, 0.06, 0.07, 0.96)
+    Outline(panel, 0.5)
 
-    local title = Label(panel, "GameFontNormal")
-    title:SetPoint("TOPLEFT", 10, -10)
+    local title = Label(panel, "GameFontNormalLarge")
+    title:SetPoint("TOPLEFT", PAD, -PAD)
     title:SetText("Send materials")
-    title:SetTextColor(ACCENT_R, ACCENT_G, ACCENT_B)
+    title:SetTextColor(1, 0.85, 0.6)
 
-    -- Who to: < name >
-    local to = Label(panel, "GameFontDisableSmall")
-    to:SetPoint("TOPLEFT", 10, -34)
-    to:SetText("To")
-    panel.prev = Button(panel, 28, 28, "<", function() ns.StepMailTarget(-1); ns.RefreshMailPanel() end)
-    panel.prev:SetPoint("TOPLEFT", 10, -48)
-    panel.next = Button(panel, 28, 28, ">", function() ns.StepMailTarget(1); ns.RefreshMailPanel() end)
-    panel.next:SetPoint("TOPRIGHT", -10, -48)
+    -- Send to:  [<]  Name Surname  [>]
+    local y = -42
+    Heading("SEND TO", y)
+    y = y - 18
+    panel.prev = Button(panel, 30, 30, "<", function() ns.StepMailTarget(-1); ns.RefreshMailPanel() end)
+    panel.prev:SetPoint("TOPLEFT", PAD, y)
+    panel.next = Button(panel, 30, 30, ">", function() ns.StepMailTarget(1); ns.RefreshMailPanel() end)
+    panel.next:SetPoint("TOPRIGHT", -PAD, y)
     panel.target = Label(panel, "GameFontHighlight", "CENTER")
-    panel.target:SetPoint("TOPLEFT", 42, -55)
-    panel.target:SetPoint("TOPRIGHT", -42, -55)
+    panel.target:SetPoint("TOPLEFT", PAD + 34, y - 8)
+    panel.target:SetPoint("TOPRIGHT", -PAD - 34, y - 8)
+    y = y - 36
 
     -- Bank alt: marks (or unmarks) the character shown above.
-    panel.bank = Button(panel, 200, 24, "", function()
+    panel.bank = Button(panel, INNER, 26, "", function()
         local target = ns.MailTarget()
         if target then ns.ToggleBankAlt(target.key) end
         ns.RefreshMailPanel()
     end)
-    panel.bank:SetPoint("TOPLEFT", 10, -82)
+    panel.bank.label:SetFontObject("GameFontHighlightSmall")
+    panel.bank:SetPoint("TOPLEFT", PAD, y)
+    y = y - 40
 
-    -- What: one on/off button per kind.
+    -- What to send: one on/off row per kind, a coloured box showing which.
+    Heading("WHAT TO SEND", y)
+    y = y - 18
     panel.toggles = {}
-    for index, kind in ipairs(ns.MAIL_KINDS) do
-        local toggle = Button(panel, 200, 26, "", function()
+    for _, kind in ipairs(ns.MAIL_KINDS) do
+        local toggle = Button(panel, INNER, 28, "", function()
             ns.db.mailKinds[kind.key] = not ns.db.mailKinds[kind.key]
             ns.RefreshMailPanel()
         end)
-        toggle:SetPoint("TOPLEFT", 10, -114 - (index - 1) * 30)
+        toggle:SetPoint("TOPLEFT", PAD, y)
+        toggle.box = toggle:CreateTexture(nil, "ARTWORK")
+        toggle.box:SetSize(12, 12)
+        toggle.box:SetPoint("LEFT", 10, 0)
         toggle.label:ClearAllPoints()
-        toggle.label:SetPoint("LEFT", 8, 0)
+        toggle.label:SetPoint("LEFT", 30, 0)
+        toggle.label:SetPoint("RIGHT", -44, 0)
+        toggle.label:SetJustifyH("LEFT")
         toggle.label:SetText(kind.label)
-        toggle.state = Label(toggle, "GameFontHighlight", "RIGHT")
-        toggle.state:SetPoint("RIGHT", -8, 0)
+        toggle.state = Label(toggle, "GameFontHighlightSmall", "RIGHT")
+        toggle.state:SetPoint("RIGHT", -10, 0)
         panel.toggles[kind.key] = toggle
+        y = y - 32
     end
 
+    -- What will go, then Send.
+    y = y - 6
     panel.summary = Label(panel, "GameFontHighlightSmall", "CENTER")
-    panel.summary:SetPoint("BOTTOMLEFT", 10, 46)
-    panel.summary:SetPoint("BOTTOMRIGHT", -10, 46)
-
-    panel.send = Button(panel, 200, 30, "Send", function()
+    panel.summary:SetPoint("TOPLEFT", PAD, y)
+    panel.summary:SetPoint("TOPRIGHT", -PAD, y)
+    y = y - 22
+    panel.send = Button(panel, INNER, 34, "Send", function()
         if not sending then ns.SendNextMail() end
         ns.RefreshMailPanel()
     end)
-    panel.send:SetPoint("BOTTOMLEFT", 10, 10)
+    panel.send.label:SetFontObject("GameFontNormalLarge")
+    panel.send:SetPoint("TOPLEFT", PAD, y)
+    y = y - 34 - PAD
+
+    panel:SetSize(WIDTH, -y)
     ns.mailPanel = panel
 end
 

@@ -1,5 +1,9 @@
 # AltGlance
 
+## 0.6.2
+
+- The Send materials panel is tidier and easier to read: wider, so full names fit; headings for Send to and What to send; a coloured box and On or Off on each kind; a short Make this my bank alt button (it turned green as Your bank alt); and the stacks and mails to send on their own line above a larger Send button, no longer hidden behind the last row.
+
 ## 0.6.1
 
 - **Full names.** Forever characters have a first and a last name, and first names are not unique, so AltGlance now records each character's full name (as Shannizz Wolfbane) and shows it in the list and tooltips. It is learned the next time you log in to each character.
