@@ -23,7 +23,7 @@ Click a column heading to sort by it; click again to reverse. Hover a row for mo
 
 ## Using it
 
-Click the AltGlance button on the minimap, or type `/alts`.
+Click the AltGlance button on the minimap, or type `/alts` (or `/altglance`).
 
 A character appears in the list once you have logged in to them with AltGlance enabled, and their line is brought up to date each time you play them. Characters you have not played since installing it are not listed yet.
 

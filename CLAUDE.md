@@ -18,7 +18,7 @@ All your characters at a glance: level, gold, where they are, rested experience,
 - `ns.Snapshot` rewrites the current character's record on login and on the events in `REFRESH_EVENTS` (money, level, experience, resting, zone, skills, bags, logout). Each field is only overwritten when the game gives a usable value, so something withheld for a moment does not erase what was known. It runs under `pcall`.
 - Rested experience for characters not being played is estimated: 5% of a level per 8 hours when they logged out resting, a quarter of that otherwise, capped at 1.5 levels. Those are the original game's rates and are unverified for Forever; the window marks estimates with `~`.
 - `ns.Characters` returns proxies over the saved records (so `key` and `isCurrent` are never written to the saved data), sorted by `sortBy` / `sortDescending`.
-- Professions are read with `GetProfessions` / `GetProfessionInfo`, which GatherTrail confirmed works on Forever. Free bag slots come from `C_Container.GetContainerNumFreeSlots` over bags 0 to 4.
+- Professions are read with `GetProfessions` / `GetProfessionInfo`, which GatherLog confirmed works on Forever. Free bag slots come from `C_Container.GetContainerNumFreeSlots` over bags 0 to 4.
 - Money shows the game's coin icons through `C_CurrencyInfo.GetCoinTextureString` where available, otherwise as text.
 - Not run in the real game when written (2026-10-13). Characters on Forever have a first and last name; what `UnitName` returns for them is unverified.
 
