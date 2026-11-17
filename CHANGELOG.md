@@ -1,5 +1,9 @@
 # AltGlance
 
+## 0.6.5
+
+- Fixed: Gems on the Send materials panel did not pick up Malachite, Tigerseye or Shadowgem. Forever files gems under trade goods, Other, together with all sorts of reagents, so they are now known by item: the original game's gems and pearls.
+
 ## 0.6.4
 
 - Two more kinds on the Send materials panel, both off until you turn them on: **Gems** (Malachite, Tigerseye, Shadowgem and the like) and **Recipes & patterns** (ones not yet soulbound).

@@ -27,6 +27,13 @@ local GEM = CLASS.Gem or 3
 local RECIPE = CLASS.Recipe or 9
 local JEWELCRAFTING = SUB.Jewelcrafting or 4
 
+-- The original game's gems and pearls, by item ID.
+local GEM_IDS = {}
+for _, id in ipairs({ 774, 818, 1210, 1206, 1705, 1529, 3864, 7909, 7910, 12799, 12361, 12364, 12800,
+        11754, 5498, 5500, 7971, 13926, 12363 }) do
+    GEM_IDS[id] = true
+end
+
 local function TradeGoods(subclass)
     return function(classID, subclassID) return classID == TRADE_GOODS and subclassID == subclass end
 end
@@ -39,10 +46,12 @@ ns.MAIL_KINDS = {
     { key = "herb", label = "Herbs", match = TradeGoods(SUB.Herb or 9) },
     { key = "leather", label = "Leather", match = TradeGoods(SUB.Leather or 6) },
     { key = "cloth", label = "Cloth", match = TradeGoods(SUB.Cloth or 5) },
-    -- Malachite, Tigerseye, Shadowgem and the like: the Gem class, or trade
-    -- goods the game files under jewelcrafting.
-    { key = "gems", label = "Gems", match = function(classID, subclassID)
-        return classID == GEM or (classID == TRADE_GOODS and subclassID == JEWELCRAFTING)
+    -- Malachite, Tigerseye, Shadowgem and the like. Forever files these
+    -- under trade goods, "Other" (class 7, subclass 11; seen in game
+    -- 2026-11-17) along with all sorts, so they are known by ID; the Gem
+    -- class and jewelcrafting trade goods count too.
+    { key = "gems", label = "Gems", match = function(classID, subclassID, _, itemID)
+        return GEM_IDS[itemID] or classID == GEM or (classID == TRADE_GOODS and subclassID == JEWELCRAFTING)
     end },
     -- Recipes, patterns, plans and schematics not yet soulbound.
     { key = "recipes", label = "Recipes & patterns", match = function(classID) return classID == RECIPE end },
@@ -207,7 +216,7 @@ function ns.MaterialsToSend()
                 local ok, _, _, _, _, _, classID, subclassID = pcall(C_Item.GetItemInfoInstant, id)
                 if ok then
                     for _, match in ipairs(wanted) do
-                        if match(classID, subclassID, info.quality) then
+                        if match(classID, subclassID, info.quality, id) then
                             list[#list + 1] = { bag = bag, slot = slot, id = id, count = info.stackCount or 1 }
                             break
                         end
