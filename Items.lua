@@ -118,7 +118,7 @@ function ns.ItemHolders(itemID)
     end
     table.sort(holders, function(a, b)
         if a.total ~= b.total then return a.total > b.total end
-        return (a.record.name or "") < (b.record.name or "")
+        return ns.DisplayName(a.record) < ns.DisplayName(b.record)
     end)
     return holders
 end
@@ -141,7 +141,7 @@ end
 
 local function NameWithCrest(record)
     local faction = ns.FACTIONS and ns.FACTIONS[record.faction or ""]
-    local name = record.name or "?"
+    local name = ns.DisplayName(record)
     if faction then
         return ("|T%s:0|t %s"):format(faction.icon, name)
     end
@@ -239,7 +239,7 @@ function ns.PrintFind(text)
         end
         local parts = {}
         for _, holder in ipairs(item.holders) do
-            parts[#parts + 1] = (holder.record.name or "?") .. " " .. ns.HolderText(holder)
+            parts[#parts + 1] = ns.DisplayName(holder.record) .. " " .. ns.HolderText(holder)
         end
         ns.Print(item.link .. ": " .. table.concat(parts, ", "))
     end

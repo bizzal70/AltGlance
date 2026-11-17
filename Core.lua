@@ -37,6 +37,11 @@ local function Usable(value)
 end
 ns.Usable = Usable
 
+-- A character's name as shown: the full name (first and last) once known.
+function ns.DisplayName(record)
+    return record.fullName or record.name or "?"
+end
+
 -- 12345 copper -> "1g 23s 45c"
 function ns.Money(copper)
     copper = math.floor(copper + 0.5)
@@ -116,7 +121,22 @@ function ns.Snapshot()
         ns.db.chars[key] = record
     end
 
-    Keep(record, "name", UnitName("player"))
+    -- Forever characters have a first and a last name, and first names are
+    -- not unique: UnitName gives "Shannizz" plus "Wolfbane" as a second
+    -- value, GetUnitName("player", true) gives "Shannizz Wolfbane" (seen in
+    -- game 2026-11-17). The full name is what tells characters apart, and
+    -- what mail is sent to.
+    local first, second = UnitName("player")
+    Keep(record, "name", first)
+    local full
+    if GetUnitName then
+        local ok, text = pcall(GetUnitName, "player", true)
+        if ok and Usable(text) and type(text) == "string" and text ~= "" then full = text end
+    end
+    if not full and Usable(first) and Usable(second) and type(second) == "string" and second ~= "" then
+        full = first .. " " .. second
+    end
+    Keep(record, "fullName", full)
     Keep(record, "realm", GetRealmName())
     local className, classFile = UnitClass("player")
     Keep(record, "class", className)
@@ -169,7 +189,7 @@ end
 
 local SORTS = {
     faction = function(record) return record.faction or "" end,
-    name = function(record) return (record.name or ""):lower() end,
+    name = function(record) return ns.DisplayName(record):lower() end,
     level = function(record) return record.level or 0 end,
     money = function(record) return record.money or 0 end,
     zone = function(record) return (record.zone or ""):lower() end,
@@ -204,7 +224,7 @@ function ns.Characters()
             return (a.level or 0) > (b.level or 0)
         end
         -- Same in the sorted column: by name, so the order is steady.
-        return (a.name or "") < (b.name or "")
+        return ns.DisplayName(a) < ns.DisplayName(b)
     end)
     return list, total
 end
@@ -214,7 +234,7 @@ function ns.Forget(key)
     local record = ns.db.chars[key]
     if not record then return end
     ns.db.chars[key] = nil
-    return record.name or "that character"
+    return ns.DisplayName(record)
 end
 
 -- Finds a record by the start of its name, ignoring case.
@@ -222,7 +242,10 @@ local function FindByName(text)
     text = text:lower()
     local found
     for key, record in pairs(ns.db.chars) do
-        if record.name and record.name:lower():sub(1, #text) == text then
+        -- By the start of the first name, or of the full name ("shanbizz g").
+        local full = ns.DisplayName(record):lower()
+        if (record.name and record.name:lower():sub(1, #text) == text and not text:find(" ", 1, true))
+                or full:sub(1, #text) == text then
             if found then return nil, "more than one character's name starts with that" end
             found = key
         end
@@ -246,7 +269,7 @@ SlashCmdList.ALTGLANCE = function(msg)
     elseif command == "bank" then
         if rest == "" then
             local _, record = ns.BankAlt()
-            ns.Print(record and (record.name .. " is your bank alt here. /alts bank off to clear it.")
+            ns.Print(record and (ns.DisplayName(record) .. " is your bank alt here. /alts bank off to clear it.")
                 or "No bank alt for this realm and faction. /alts bank <name> to choose one.")
         elseif rest:lower() == "off" then
             local key = ns.BankAlt()
@@ -258,11 +281,13 @@ SlashCmdList.ALTGLANCE = function(msg)
             elseif key == ns.CurrentKey() then
                 ns.Print("That is the character you are playing; choose the one you send things to.")
             elseif key == ns.BankAlt() then
-                ns.Print(ns.db.chars[key].name .. " is already your bank alt.")
+                ns.Print(ns.DisplayName(ns.db.chars[key]) .. " is already your bank alt.")
             else
                 local mine, theirs = ns.db.chars[ns.CurrentKey() or ""], ns.db.chars[key]
                 if mine and (mine.realm ~= theirs.realm or mine.faction ~= theirs.faction) then
-                    ns.Print(theirs.name .. " is on another realm or faction, so they cannot be mailed from here.")
+                    ns.Print(ns.DisplayName(theirs) .. " is on another realm or faction, so they cannot be mailed from here.")
+                elseif not theirs.fullName then
+                    ns.Print(theirs.name .. "'s full name is not known yet: log in to them once, then choose them again.")
                 else
                     ns.ToggleBankAlt(key)
                 end

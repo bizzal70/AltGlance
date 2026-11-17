@@ -256,22 +256,37 @@ ME.bags[1] = { 16, 0 }
 ME.items = { [0] = { { 2770, 20 }, { 765, 5 }, { 2318, 8 }, { 2589, 10 }, { 117, 4 }, { 2770, 20, bound = true } }, [1] = {} }
 for slot = 1, 10 do ME.items[1][slot] = { 2771, 5 } end
 Fire("BAG_UPDATE_DELAYED")
+-- Forever's full names: first and last. Learned when a character is played.
+GetUnitName = function(unit, withRealm) return ME.name .. " " .. (ME.surname or "Stone") end
+Fire("PLAYER_MONEY")
+check(ns.db.chars["Player-3"].fullName == "Aaron Stone", "the full name (first and last) is recorded")
+GetUnitName = nil
+UnitName = function() return ME.name, "Ashford" end
+Fire("PLAYER_MONEY")
+ns.db.chars["Player-3"].fullName = nil; Fire("PLAYER_MONEY")
+check(ns.db.chars["Player-3"].fullName == "Aaron Ashford", "without GetUnitName, it is the first name and UnitName's second value")
+ns.db.chars["Player-3"].fullName = "Aaron Stone"
+UnitName = function() return ME.name end
 Fire("MAIL_SHOW")
 local panel = ns.mailPanel
+check(#ns.MailRecipients() == 0, "a character whose full name is not known yet is not offered (mail only goes to full names)")
+ns.db.chars["Player-1"].fullName = "Mirabel Brightwater"
+ns.db.chars["Player-2"].fullName = "Tolan Grimbane"
+ns.RefreshMailPanel()
 check(panel and panel:IsShown(), "opening the mailbox shows the Send materials panel")
 local list = ns.MailRecipients()
-check(#list == 1 and list[1].record.name == "Mirabel", "only characters this one can mail are offered: same realm and faction")
+check(#list == 1 and list[1].record.fullName == "Mirabel Brightwater", "only characters this one can mail are offered: same realm and faction")
 check(#ns.MaterialsToSend() == 14, "ore, herbs, leather and cloth are picked up; food and soulbound items are not")
 panel.toggles.cloth.__scripts.OnClick(panel.toggles.cloth)
 check(#ns.MaterialsToSend() == 13 and not ns.db.mailKinds.cloth, "a kind can be turned off")
 check(nameBox.text == "", "with no bank alt, the To box is left empty")
 -- Making Mirabel the bank alt fills in the To box.
 panel.bank.__scripts.OnClick(panel.bank)
-check(ns.BankAlt() == "Player-1" and nameBox.text == "Mirabel", "Make Mirabel my bank alt fills her name in on Send Mail")
+check(ns.BankAlt() == "Player-1" and nameBox.text == "Mirabel Brightwater", "Make Mirabel my bank alt fills her name in on Send Mail")
 -- Sending: 12 stacks a mail, the rest after the first has gone.
 GetMoney = function() return 100000 end
 panel.send.__scripts.OnClick(panel.send)
-check(#sentMails == 1 and sentMails[1].to == "Mirabel" and sentMails[1].stacks == 12 and sentMails[1].subject == "Materials", "Send mails the first 12 stacks to Mirabel")
+check(#sentMails == 1 and sentMails[1].to == "Mirabel Brightwater" and sentMails[1].stacks == 12 and sentMails[1].subject == "Materials", "Send mails the first 12 stacks to Mirabel")
 Fire("MAIL_SEND_SUCCESS"); RunTimers()
 check(#sentMails == 2 and sentMails[2].stacks == 1, "then the rest once the first has gone")
 
@@ -281,7 +296,7 @@ check(ME.items[0][4] ~= nil and ME.items[0][6] ~= nil, "the cloth (turned off) a
 -- After an ordinary mail the To box is filled in again.
 nameBox.text = ""
 Fire("MAIL_SEND_SUCCESS"); RunTimers()
-check(nameBox.text == "Mirabel", "after a mail is sent, the bank alt's name is filled in again")
+check(nameBox.text == "Mirabel Brightwater", "after a mail is sent, the bank alt's name is filled in again")
 nameBox.text = "Someone"
 Fire("MAIL_SHOW")
 check(nameBox.text == "Someone", "a name you typed is never replaced")
@@ -299,7 +314,7 @@ check(#sentMails == 2 and printed[#printed]:find("already has items on it", 1, t
 attached = {}
 -- /alts bank
 SlashCmdList.ALTGLANCE("bank")
-check(printed[#printed]:find("Mirabel is your bank alt", 1, true), "/alts bank says who the bank alt is")
+check(printed[#printed]:find("Mirabel Brightwater is your bank alt", 1, true), "/alts bank says who the bank alt is")
 SlashCmdList.ALTGLANCE("bank tol")
 check(printed[#printed]:find("another realm or faction", 1, true) and ns.BankAlt() == "Player-1", "a character of the other faction cannot be the bank alt")
 SlashCmdList.ALTGLANCE("bank off")
@@ -314,8 +329,21 @@ panel.toggles.disenchant.__scripts.OnClick(panel.toggles.disenchant)
 local gearList = ns.MaterialsToSend()
 check(#gearList == 1 and gearList[1].id == 1000, "turned on: green, blue and purple gear not yet soulbound; not bound gear, not grey")
 panel.send.__scripts.OnClick(panel.send)
-check(#sentMails == 3 and sentMails[3].to == "Mirabel" and sentMails[3].stacks == 1, "and it is mailed to the bank alt")
+check(#sentMails == 3 and sentMails[3].to == "Mirabel Brightwater" and sentMails[3].stacks == 1, "and it is mailed to the bank alt")
 Fire("MAIL_SEND_SUCCESS"); RunTimers()
+-- The last check before a mail goes: if the chosen character turns out
+-- to be on the other faction, nothing is sent.
+ME.items[0] = { { 2770, 20 } }
+ns.db.chars["Player-1"].faction = "Horde"
+local before = #sentMails
+local target = { key = "Player-1", record = ns.db.chars["Player-1"] }
+local realTarget = ns.MailTarget
+ns.MailTarget = function() return target, { target }, 1 end
+ns.SendNextMail()
+ns.MailTarget = realTarget
+check(#sentMails == before and printed[#printed]:find("Not sent", 1, true), "right before sending, a character of the other faction is refused: " .. tostring(printed[#printed]))
+ns.db.chars["Player-1"].faction = "Alliance"
+attached = {}
 Fire("MAIL_CLOSED")
 check(not panel:IsShown(), "closing the mailbox hides the panel")
 ME.items = nil; ME.bags[1] = { 8, 2 }

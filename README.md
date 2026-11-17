@@ -63,7 +63,7 @@ Open any mailbox and a **Send materials** panel appears beside it:
 2. **What:** turn each kind on or off: **Ore & stone**, **Herbs**, **Leather**, **Cloth**, and **Gear to disenchant** (green, blue and purple weapons and armour that are not soulbound yet; off until you turn it on).
 3. **Send:** everything chosen is mailed, 12 stacks a mail (the game's limit), one mail after another until all of it is on its way. Chat says what went. You pay the usual postage.
 
-Soulbound items, food and everything else stay in your bags. Every button is big enough to tap, and works with a gamepad.
+Soulbound items, food and everything else stay in your bags. Every button is big enough to tap, and works with a gamepad. Mail only ever goes to a character's **full name** (first and last, as Shannizz Wolfbane): first names are not unique in Forever. A character is offered once AltGlance knows their full name, which it learns the next time you log in to them, and right before each mail it checks again that it is one of yours on the same realm and faction.
 
 ### Your bank alt
 

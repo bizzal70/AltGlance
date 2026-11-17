@@ -32,6 +32,17 @@ ns.MAIL_KINDS = {
 local WEAPON = (Enum and Enum.ItemClass and Enum.ItemClass.Weapon) or 2
 local ARMOR = (Enum and Enum.ItemClass and Enum.ItemClass.Armor) or 4
 
+-- Whether this character may mail that one: a known full name (first names
+-- are not unique in Forever, so mail only ever goes to a full name), the
+-- same realm and the same faction, and not themselves.
+local function CanMail(mine, myKey, key, record)
+    return key ~= myKey and type(record.fullName) == "string" and record.fullName ~= ""
+        and record.fullName ~= mine.fullName
+        and record.faction ~= nil and record.faction == mine.faction
+        and record.realm ~= nil and record.realm == mine.realm
+end
+ns.CanMail = CanMail
+
 local function Settings()
     if not ns.db.mailKinds then
         ns.db.mailKinds = { ore = true, herb = true, leather = true, cloth = true }
@@ -44,18 +55,24 @@ end
 -- Who to send to, and what
 ---------------------------------------------------------------------------
 
--- Your other characters this one can mail: same realm, same faction.
+-- Whether this character may mail that one: a known full name (first names
+-- are not unique in Forever, so mail only ever goes to a full name), the
+-- same realm and the same faction, and not themselves.
+
+-- Your other characters this one can mail. A character recorded before
+-- 0.6.1 appears once you have logged in to them again (to learn their
+-- full name).
 function ns.MailRecipients()
     local list = {}
     local me = ns.CurrentKey()
     local mine = me and ns.db.chars[me]
     if not mine then return list end
     for key, record in pairs(ns.db.chars) do
-        if key ~= me and record.name and record.faction == mine.faction and record.realm == mine.realm then
+        if CanMail(mine, me, key, record) then
             list[#list + 1] = { key = key, record = record }
         end
     end
-    table.sort(list, function(a, b) return a.record.name < b.record.name end)
+    table.sort(list, function(a, b) return a.record.fullName < b.record.fullName end)
     return list
 end
 
@@ -78,7 +95,7 @@ function ns.BankAlt()
     if not mine then return end
     local key = ns.db.bankAlt[Group(mine)]
     local record = key and ns.db.chars[key]
-    if not record or key == me or Group(record) ~= Group(mine) then return end
+    if not record or not CanMail(mine, me, key, record) then return end
     return key, record
 end
 
@@ -91,11 +108,11 @@ function ns.ToggleBankAlt(key)
     local group = Group(record)
     if ns.db.bankAlt[group] == key then
         ns.db.bankAlt[group] = nil
-        ns.Print(record.name .. " is no longer your bank alt.")
+        ns.Print(record.fullName .. " is no longer your bank alt.")
     else
         ns.db.bankAlt[group] = key
         ns.db.mailTo[ns.CurrentKey() or ""] = key
-        ns.Print(record.name .. " is now your bank alt: their name is filled in when you open Send Mail.")
+        ns.Print(record.fullName .. " is now your bank alt: their name is filled in when you open Send Mail.")
         ns.FillBankAltName()
     end
 end
@@ -107,7 +124,7 @@ function ns.FillBankAltName()
     if not record or not box or not box.GetText then return end
     local ok, text = pcall(box.GetText, box)
     if ok and (text == nil or text == "") then
-        pcall(box.SetText, box, record.name)
+        pcall(box.SetText, box, record.fullName)
     end
 end
 
@@ -197,13 +214,13 @@ end
 function ns.SendNextMail()
     local target = ns.MailTarget()
     if not target then
-        return Finish("No other character of yours on this realm and faction to send to yet. A character is known once you have logged in to them with AltGlance on.")
+        return Finish("No other character of yours on this realm and faction to send to yet. A character is offered once you have logged in to them with AltGlance 0.6.1 or later, which learns their full name.")
     end
     local items = ns.MaterialsToSend()
     if #items == 0 then
         if sending then
             return Finish(("Sent %d stack%s in %d mail%s to %s."):format(sending.stacks, sending.stacks == 1 and "" or "s",
-                sending.mails, sending.mails == 1 and "" or "s", target.record.name))
+                sending.mails, sending.mails == 1 and "" or "s", target.record.fullName))
         end
         return Finish("Nothing to send: no materials of the kinds turned on in your bags.")
     end
@@ -231,9 +248,17 @@ function ns.SendNextMail()
     if okPrice and Usable(price) and price > GetMoney() then
         return Finish(("Not enough money for the postage (%s)."):format(ns.Money(price)))
     end
-    sending = sending or { to = target.record.name, mails = 0, stacks = 0 }
+    -- One last check, right before it goes: still the same faction and
+    -- realm as you, under a full name.
+    local me = ns.CurrentKey()
+    local mine = me and ns.db.chars[me]
+    if not (mine and CanMail(mine, me, target.key, target.record)) then
+        if ClearSendMail then pcall(ClearSendMail) end
+        return Finish("Not sent: " .. ns.DisplayName(target.record) .. " is not a character of yours on this realm and faction.")
+    end
+    sending = sending or { to = target.record.fullName, mails = 0, stacks = 0 }
     sending.pending = attached
-    SendMail(target.record.name, SUBJECT, "")
+    SendMail(target.record.fullName, SUBJECT, "")
 end
 
 ---------------------------------------------------------------------------
@@ -281,10 +306,10 @@ function ns.RefreshMailPanel()
     if not panel or not panel:IsShown() then return end
     local target, list = ns.MailTarget()
     if target then
-        panel.target:SetText(target.record.name)
+        panel.target:SetText(target.record.fullName)
         panel.target:SetTextColor(ClassColour(target.record.classFile))
     else
-        panel.target:SetText("No one to send to")
+        panel.target:SetText("No one yet: log in to an alt once")
         panel.target:SetTextColor(0.6, 0.6, 0.6)
     end
     panel.prev:SetShown(#list > 1)
@@ -292,10 +317,10 @@ function ns.RefreshMailPanel()
     local bankKey = ns.BankAlt()
     panel.bank:SetShown(target ~= nil)
     if target and target.key == bankKey then
-        panel.bank.label:SetText(target.record.name .. " is your bank alt")
+        panel.bank.label:SetText(target.record.fullName .. " is your bank alt")
         panel.bank.label:SetTextColor(0.3, 0.9, 0.3)
     elseif target then
-        panel.bank.label:SetText("Make " .. target.record.name .. " my bank alt")
+        panel.bank.label:SetText("Make " .. target.record.fullName .. " my bank alt")
         panel.bank.label:SetTextColor(1, 1, 1)
     end
     for _, kind in ipairs(ns.MAIL_KINDS) do
@@ -315,7 +340,7 @@ function ns.RefreshMailPanel()
         panel.summary:SetText(("%d stack%s: %d mail%s"):format(stacks, stacks == 1 and "" or "s", mails, mails == 1 and "" or "s"))
     end
     panel.send:SetEnabled(target ~= nil and stacks > 0 and not sending)
-    panel.send.label:SetText(target and ("Send to " .. target.record.name) or "Send")
+    panel.send.label:SetText(target and ("Send to " .. target.record.fullName) or "Send")
 end
 
 local function CreatePanel()

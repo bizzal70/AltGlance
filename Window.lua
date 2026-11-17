@@ -113,7 +113,7 @@ end
 local CELLS = {
     -- The faction column shows the crest (row.faction), no text.
     faction = function() return "" end,
-    name =function(record) return record.name or "?" end,
+    name = function(record) return ns.DisplayName(record) end,
     level = function(record) return record.level and tostring(record.level) or "" end,
     money = function(record) return record.money and MoneyText(record.money) or "" end,
     zone = function(record) return record.zone or "" end,
@@ -133,7 +133,7 @@ local function RowOnEnter(row)
     if not record then return end
     GameTooltip:SetOwner(row, "ANCHOR_RIGHT")
     local r, g, b = ClassColor(record.classFile)
-    GameTooltip:AddLine(record.name or "?", r, g, b)
+    GameTooltip:AddLine(ns.DisplayName(record), r, g, b)
     local who = {}
     if record.level then who[#who + 1] = "Level " .. record.level end
     if record.class then who[#who + 1] = record.class end
@@ -220,7 +220,7 @@ local function CreateRow(index)
             ns.RefreshWindow()
         else
             armedKey, armedAt = record.key, GetTime()
-            ns.Print(("Press the x again to remove %s from the list."):format(record.name or "this character"))
+            ns.Print(("Press the x again to remove %s from the list."):format(ns.DisplayName(record)))
         end
     end)
     remove:SetScript("OnEnter", function(self)

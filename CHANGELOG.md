@@ -1,5 +1,10 @@
 # AltGlance
 
+## 0.6.1
+
+- **Full names.** Forever characters have a first and a last name, and first names are not unique, so AltGlance now records each character's full name (as Shannizz Wolfbane) and shows it in the list and tooltips. It is learned the next time you log in to each character.
+- **Safer mail.** Send materials and the bank alt now use full names only: a character appears on the panel once their full name is known. Right before each mail goes, AltGlance checks again that it is one of your characters on the same realm and faction, and sends nothing otherwise.
+
 ## 0.6.0
 
 - **Send materials:** opening a mailbox shows a panel beside it that mails your ore and stone, herbs, leather and cloth to another of your characters on the same realm and faction, 12 stacks a mail, one after another until all are sent. Pick who with the < and > buttons, turn each kind on or off, then press Send. Soulbound items, food and everything else stay in your bags. Made to be easy with a gamepad or touchscreen.
