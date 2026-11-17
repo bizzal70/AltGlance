@@ -20,17 +20,38 @@ local SUBJECT = "Materials"
 -- it has one.
 local TRADE_GOODS = (Enum and Enum.ItemClass and Enum.ItemClass.Tradegoods) or 7
 local SUB = (Enum and Enum.ItemTradeGoodsSubclass) or {}
+local CLASS = (Enum and Enum.ItemClass) or {}
+local WEAPON = CLASS.Weapon or 2
+local ARMOR = CLASS.Armor or 4
+local GEM = CLASS.Gem or 3
+local RECIPE = CLASS.Recipe or 9
+local JEWELCRAFTING = SUB.Jewelcrafting or 4
+
+local function TradeGoods(subclass)
+    return function(classID, subclassID) return classID == TRADE_GOODS and subclassID == subclass end
+end
+
+-- What can be sent, each turned on or off on the panel. Each kind says
+-- whether an item (by class, subclass and quality) is one of it. The first
+-- four start on; the rest are off until turned on.
 ns.MAIL_KINDS = {
-    { key = "ore", label = "Ore & stone", subclass = SUB.MetalAndStone or 7 },
-    { key = "herb", label = "Herbs", subclass = SUB.Herb or 9 },
-    { key = "leather", label = "Leather", subclass = SUB.Leather or 6 },
-    { key = "cloth", label = "Cloth", subclass = SUB.Cloth or 5 },
+    { key = "ore", label = "Ore & stone", match = TradeGoods(SUB.MetalAndStone or 7) },
+    { key = "herb", label = "Herbs", match = TradeGoods(SUB.Herb or 9) },
+    { key = "leather", label = "Leather", match = TradeGoods(SUB.Leather or 6) },
+    { key = "cloth", label = "Cloth", match = TradeGoods(SUB.Cloth or 5) },
+    -- Malachite, Tigerseye, Shadowgem and the like: the Gem class, or trade
+    -- goods the game files under jewelcrafting.
+    { key = "gems", label = "Gems", match = function(classID, subclassID)
+        return classID == GEM or (classID == TRADE_GOODS and subclassID == JEWELCRAFTING)
+    end },
+    -- Recipes, patterns, plans and schematics not yet soulbound.
+    { key = "recipes", label = "Recipes & patterns", match = function(classID) return classID == RECIPE end },
     -- Green, blue and purple weapons and armour that are not soulbound yet
-    -- (bind on equip): for a bank alt who disenchants. Off until turned on.
-    { key = "disenchant", label = "Gear to disenchant", gear = true },
+    -- (bind on equip): for a bank alt who disenchants.
+    { key = "disenchant", label = "Gear to disenchant", match = function(classID, _, quality)
+        return (classID == WEAPON or classID == ARMOR) and Usable(quality) and quality >= 2 and quality <= 4
+    end },
 }
-local WEAPON = (Enum and Enum.ItemClass and Enum.ItemClass.Weapon) or 2
-local ARMOR = (Enum and Enum.ItemClass and Enum.ItemClass.Armor) or 4
 
 -- Whether this character may mail that one: a known full name (first names
 -- are not unique in Forever, so mail only ever goes to a full name), the
@@ -171,11 +192,9 @@ end
 -- The stacks in your bags of the kinds turned on: { bag, slot, itemID, count }.
 function ns.MaterialsToSend()
     Settings()
-    local wanted, gear = {}, false
+    local wanted = {}
     for _, kind in ipairs(ns.MAIL_KINDS) do
-        if ns.db.mailKinds[kind.key] then
-            if kind.gear then gear = true else wanted[kind.subclass] = true end
-        end
+        if ns.db.mailKinds[kind.key] then wanted[#wanted + 1] = kind.match end
     end
     local list = {}
     if not (C_Item and C_Item.GetItemInfoInstant) then return list end
@@ -186,11 +205,13 @@ function ns.MaterialsToSend()
             local id = info and info.itemID
             if Usable(id) and not info.isBound and not info.isLocked then
                 local ok, _, _, _, _, _, classID, subclassID = pcall(C_Item.GetItemInfoInstant, id)
-                local quality = info.quality
-                local isGear = gear and (classID == WEAPON or classID == ARMOR)
-                    and Usable(quality) and quality >= 2 and quality <= 4
-                if ok and ((classID == TRADE_GOODS and wanted[subclassID]) or isGear) then
-                    list[#list + 1] = { bag = bag, slot = slot, id = id, count = info.stackCount or 1 }
+                if ok then
+                    for _, match in ipairs(wanted) do
+                        if match(classID, subclassID, info.quality) then
+                            list[#list + 1] = { bag = bag, slot = slot, id = id, count = info.stackCount or 1 }
+                            break
+                        end
+                    end
                 end
             end
         end

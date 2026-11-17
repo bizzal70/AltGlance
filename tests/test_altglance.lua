@@ -222,11 +222,12 @@ check(footer and footer:find("Horde 1: 5s", 1, true) and footer:find("Alliance 2
 
 -- Send materials at the mailbox, and the bank alt. Aaron (Alliance) is
 -- being played; Mirabel is Alliance on the same realm, Tolan is Horde.
-local CATEGORY = { [1000] = { 2, 7 }, [1001] = { 4, 2 }, [1002] = { 4, 1 }, [2770] = { 7, 7 }, [2771] = { 7, 7 }, [765] = { 7, 9 }, [2318] = { 7, 6 }, [2589] = { 7, 5 }, [117] = { 0, 5 } }
+local CATEGORY = { [774] = { 3, 0 }, [818] = { 7, 4 }, [6271] = { 9, 2 }, [6272] = { 9, 2 }, [1000] = { 2, 7 }, [1001] = { 4, 2 }, [1002] = { 4, 1 }, [2770] = { 7, 7 }, [2771] = { 7, 7 }, [765] = { 7, 9 }, [2318] = { 7, 6 }, [2589] = { 7, 5 }, [117] = { 0, 5 } }
 C_Item = C_Item or {}
 C_Item.GetItemInfoInstant = function(id) local c = CATEGORY[id]; if c then return id, "", "", "", 0, c[1], c[2] end end
 ITEM_NAMES[2318], ITEM_NAMES[117] = "Light Leather", "Tough Jerky"
 ITEM_NAMES[1000], ITEM_NAMES[1001], ITEM_NAMES[1002] = "Green Sword", "Blue Vest", "Grey Boots"
+ITEM_NAMES[774], ITEM_NAMES[818], ITEM_NAMES[6271], ITEM_NAMES[6272] = "Malachite", "Tigerseye", "Pattern: Red Linen Vest", "Pattern: Bound"
 C_Container.GetContainerItemInfo = function(bag, slot)
     local item = ME.items and ME.items[bag] and ME.items[bag][slot]
     if not item then return nil end
@@ -321,6 +322,18 @@ SlashCmdList.ALTGLANCE("bank off")
 check(ns.BankAlt() == nil, "/alts bank off clears it")
 SlashCmdList.ALTGLANCE("bank mira")
 check(ns.BankAlt() == "Player-1", "/alts bank <name> sets it")
+-- Gems and recipes: off until turned on; soulbound recipes never.
+panel.toggles.disenchant.__scripts.OnClick(panel.toggles.disenchant)
+ME.items[0] = { { 774, 7 }, { 818, 1 }, { 6271, 1 }, { 6272, 1, bound = true } }
+check(#ns.MaterialsToSend() == 0 and not ns.db.mailKinds.gems and not ns.db.mailKinds.recipes, "gems and recipes are never sent unless turned on")
+panel.toggles.gems.__scripts.OnClick(panel.toggles.gems)
+check(#ns.MaterialsToSend() == 2, "Gems: the Gem class and jewelcrafting trade goods (Malachite, Tigerseye)")
+panel.toggles.recipes.__scripts.OnClick(panel.toggles.recipes)
+local found = ns.MaterialsToSend()
+check(#found == 3 and found[3].id == 6271, "Recipes & patterns: ones not yet soulbound")
+panel.toggles.gems.__scripts.OnClick(panel.toggles.gems)
+panel.toggles.recipes.__scripts.OnClick(panel.toggles.recipes)
+panel.toggles.disenchant.__scripts.OnClick(panel.toggles.disenchant)
 -- Gear to disenchant: off until turned on; then green to purple gear not yet soulbound.
 ME.items[0] = { { 1000, 1, quality = 2 }, { 1001, 1, quality = 3, bound = true }, { 1002, 1, quality = 0 } }
 ME.items[1] = {}

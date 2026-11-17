@@ -1,5 +1,9 @@
 # AltGlance
 
+## 0.6.4
+
+- Two more kinds on the Send materials panel, both off until you turn them on: **Gems** (Malachite, Tigerseye, Shadowgem and the like) and **Recipes & patterns** (ones not yet soulbound).
+
 ## 0.6.3
 
 - A **Bank alt** column in the list: tick a character to make them the bank alt for their realm and faction (the one ticked before is unticked), untick to clear. Works from any character, whenever you change your mind; the mailbox panel and `/alts bank` still work too.
