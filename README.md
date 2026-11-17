@@ -31,16 +31,34 @@ A character appears in the list once you have logged in to them with AltGlance e
 | Command | What it does |
 |---|---|
 | `/alts` | Open the list |
+| `/alts find <item>` | Which of your characters has an item, in bags or bank: `/alts find linen` |
+| `/alts tooltip` | Item tooltips showing each character's count, on or off |
 | `/alts forget <name>` | Remove a character you no longer have |
 | `/alts button` | Show or hide the minimap button |
 
 You can also remove a character with the small **x** at the end of their row; it takes two presses.
 
+## On your characters
+
+Hover over any item, in your bags, at a vendor, in a link in chat, anywhere, and its tooltip shows how many each of your characters has:
+
+| On your characters: | |
+|---|---|
+| Mirabel | 26 |
+| Tolan | 14 (bags 2, bank 12) |
+| Total | 40 |
+
+Each character is shown with their faction's crest, in their class colour, most first. To search instead, type `/alts find` and part of the item's name.
+
+- **Bags** are counted whenever they change while you play a character.
+- **The bank** can only be read while it is open, so each character's bank is counted the first time they open it with AltGlance 0.5.0 or later, and kept up to date each time after.
+- Mail and items you are wearing are not counted.
+
 ## Good to know
 
 - **Rested experience is estimated** for characters you are not playing. AltGlance knows how much they had when you logged out and whether they were in an inn or city, and works out how much has built up since. Estimates are marked with `~`.
 - **Nothing is sent anywhere.** The list is saved on your own computer with the game's other saved settings.
-- It records the bags a character carries, not their bank.
+- The **Bags free** column counts the bags a character carries, not their bank.
 
 ## More from this author
 

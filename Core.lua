@@ -23,6 +23,8 @@ local defaults = {
     -- Which column the list is sorted by, and which way.
     sortBy = "level",
     sortDescending = true,
+    -- "On your characters" lines in item tooltips.
+    itemTooltip = true,
 }
 
 function ns.Print(msg)
@@ -239,6 +241,11 @@ SlashCmdList.ALTGLANCE = function(msg)
         ns.db.minimapButton = not ns.db.minimapButton
         ns.UpdateMinimapButton()
         ns.Print("Minimap button " .. (ns.db.minimapButton and "shown." or "hidden."))
+    elseif command == "find" then
+        ns.PrintFind(rest)
+    elseif command == "tooltip" then
+        ns.db.itemTooltip = not ns.db.itemTooltip
+        ns.Print("Item tooltips " .. (ns.db.itemTooltip and "show" or "no longer show") .. " how many of the item each character has.")
     elseif command == "forget" and rest ~= "" then
         local key, problem = FindByName(rest)
         if not key then
@@ -251,6 +258,8 @@ SlashCmdList.ALTGLANCE = function(msg)
         end
     else
         ns.Print("/alts - open the list of your characters")
+        ns.Print("/alts find <item> - which of your characters has an item, in bags or bank")
+        ns.Print("/alts tooltip - item tooltips showing each character's count, on or off")
         ns.Print("/alts forget <name> - remove a character you no longer have")
         ns.Print("/alts button - show or hide the minimap button")
     end
@@ -284,6 +293,7 @@ frame:SetScript("OnEvent", function(self, event, loaded)
             end
         end
         AltGlanceDB.chars = AltGlanceDB.chars or {}
+        AltGlanceDB.itemLinks = AltGlanceDB.itemLinks or {}
         ns.db = AltGlanceDB
         self:UnregisterEvent("ADDON_LOADED")
         return

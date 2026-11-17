@@ -1,8 +1,8 @@
 ## Interface: 16001
 ## Title: AltGlance
-## Notes: All your characters at a glance: level, gold, where they are, rested experience, professions and bag space. Type /alts.
+## Notes: All your characters at a glance: level, gold, where they are, rested experience, professions and bag space, and which character holds an item. Type /alts.
 ## Author: bizzal70
-## Version: 0.4.0
+## Version: 0.5.0
 ## X-Curse-Project-ID: 1792308
 ## SavedVariables: AltGlanceDB
 ## IconTexture: Interface\Icons\INV_Misc_GroupLooking
@@ -10,4 +10,5 @@
 
 Core.lua
 Window.lua
+Items.lua
 MinimapButton.lua

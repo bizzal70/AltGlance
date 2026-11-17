@@ -1,5 +1,11 @@
 # AltGlance
 
+## 0.5.0
+
+- **On your characters:** hover over any item and its tooltip lists how many each of your characters has, in their bags and in their bank, with a total. Bags are counted as you play each character; a bank is counted when that character opens it.
+- `/alts find <item>` lists which characters hold an item, by any part of its name: `/alts find linen`.
+- `/alts tooltip` turns the tooltip lines off or on.
+
 ## 0.4.0
 
 - Sort by faction: the crests now have their own **Faction** column. Click its heading to list the Alliance first, again for the Horde first; within each faction the highest level comes first.

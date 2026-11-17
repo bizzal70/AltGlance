@@ -6,6 +6,7 @@ ME = {
     zone = "Elwynn Forest", xp = 500, xpMax = 2000, rested = 400, resting = true,
     professions = { [1] = { "Mining", 45, 75 }, [2] = { "Herbalism", 60, 75 } },
     bags = { [0] = { 16, 5 }, { 8, 2 }, { 0, 0 }, { 0, 0 }, { 0, 0 } },   -- bag -> { slots, free }
+    items = { [0] = { { 2589, 20 }, { 2770, 4 } }, [1] = { [3] = { 2589, 6 } } },
 }
 PLAYER_GUID = ME.guid
 UnitGUID = function() return ME.guid end
@@ -21,10 +22,35 @@ GetXPExhaustion = function() return ME.rested end
 IsResting = function() return ME.resting end
 GetProfessions = function() return ME.professions[1] and 1 or nil, ME.professions[2] and 2 or nil end
 GetProfessionInfo = function(index) local p = ME.professions[index]; return p[1], "icon", p[2], p[3] end
+-- Item names for the fake links.
+local ITEM_NAMES = { [2589] = "Linen Cloth", [2770] = "Copper Ore", [2771] = "Tin Ore", [765] = "Silverleaf" }
 C_Container = {
-    GetContainerNumSlots = function(bag) return ME.bags[bag][1] end,
-    GetContainerNumFreeSlots = function(bag) return ME.bags[bag][2] end,
+    GetContainerNumSlots = function(bag) return ME.bags[bag] and ME.bags[bag][1] or 0 end,
+    GetContainerNumFreeSlots = function(bag) return ME.bags[bag] and ME.bags[bag][2] or 0 end,
+    -- ME.items[bag][slot] = { itemID, count }
+    GetContainerItemInfo = function(bag, slot)
+        local item = ME.items and ME.items[bag] and ME.items[bag][slot]
+        if not item then return nil end
+        return { itemID = item[1], stackCount = item[2],
+            hyperlink = "|cffffffff|Hitem:" .. item[1] .. "::|h[" .. ITEM_NAMES[item[1]] .. "]|h|r" }
+    end,
 }
+-- The item tooltip hook, and the lines it adds.
+local tooltipHook
+TooltipDataProcessor = { AddTooltipPostCall = function(kind, hook) if kind == "item" then tooltipHook = hook end end }
+Enum.TooltipDataType = { Item = "item" }
+RAID_CLASS_COLORS = { MAGE = { r = 0.25, g = 0.78, b = 0.92 } }
+local tooltipLines = {}
+rawset(GameTooltip, "AddLine", function(_, text) tooltipLines[#tooltipLines + 1] = text end)
+rawset(GameTooltip, "AddDoubleLine", function(_, left, right) tooltipLines[#tooltipLines + 1] = left .. " = " .. right end)
+local function Hover(itemID)
+    tooltipLines = {}
+    tooltipHook(GameTooltip, { id = itemID })
+    return table.concat(tooltipLines, "\n")
+end
+-- What the addon prints in chat.
+local printed = {}
+print = function(m) printed[#printed + 1] = m end
 C_ClassColor = { GetClassColor = function(classFile) if classFile == "MAGE" then return { r = 0.25, g = 0.78, b = 0.92 } end end }
 -- The fake clock the addon reads; tests move it forward.
 local clock = 1800000000
@@ -85,6 +111,7 @@ ME = {
     guid = "Player-2", name = "Tolan", class = "Hunter", classFile = "HUNTER", level = 10, money = 500, faction = "Horde",
     zone = "Dun Morogh", xp = 0, xpMax = 1000, rested = 0, resting = false, professions = {},
     bags = { [0] = { 16, 16 }, { 0, 0 }, { 0, 0 }, { 0, 0 }, { 0, 0 } },
+    items = { [0] = { { 2589, 5 } } },
 }
 clock = clock + 3600
 Fire("PLAYER_LOGIN")
@@ -98,6 +125,55 @@ Fire("PLAYER_LOGIN")
 
 local list, total = ns.Characters()
 check(#list == 3 and total == 30000 + 500 + 1000000, "every character is listed, with the total of their money")
+
+-- "On my alts": what each character holds, in tooltips and /alts find
+check(ns.db.chars["Player-1"].bagItems[2589] == 26 and ns.db.chars["Player-1"].bagItems[2770] == 4,
+    "each character's bags are counted, stacks in different bags added up")
+check(ns.db.chars["Player-2"].bagItems[2589] == 5 and ns.db.chars["Player-3"].bagItems ~= nil and next(ns.db.chars["Player-3"].bagItems) == nil,
+    "a character with empty bags has nothing counted")
+check(ns.db.itemLinks[2589]:find("Linen Cloth", 1, true), "item links are kept for their names")
+-- Aaron, being played, opens the bank: the bank and its bags are read while it is open.
+ME.bags[-1] = { 28, 26 }; ME.bags[6] = { 10, 9 }
+ME.items = { [-1] = { { 2589, 12 }, { 765, 3 } }, [6] = { [4] = { 2771, 7 } } }
+Fire("BAG_UPDATE_DELAYED")
+check(ns.db.chars["Player-3"].bankItems == nil, "the bank is not read while it is closed")
+Fire("BANKFRAME_OPENED")
+local aaron = ns.db.chars["Player-3"]
+check(aaron.bankItems and aaron.bankItems[2589] == 12 and aaron.bankItems[765] == 3 and aaron.bankItems[2771] == 7 and aaron.bankSeen == clock,
+    "opening the bank reads it, bank bags included")
+check(next(aaron.bagItems) == nil, "bank items are not counted as carried")
+ME.items[-1][1] = { 2589, 2 }; Fire("PLAYERBANKSLOTS_CHANGED")
+check(aaron.bankItems[2589] == 2, "taking items out of the open bank is kept up to date")
+Fire("BANKFRAME_CLOSED")
+ME.items[-1][1] = nil; Fire("BAG_UPDATE_DELAYED")
+check(aaron.bankItems[2589] == 2, "once closed, the bank is remembered as it was")
+-- Hovering over Linen Cloth
+local text = Hover(2589)
+check(text:find("On your characters:", 1, true) and text:find("Mirabel = 26", 1, true) and text:find("Tolan = 5", 1, true)
+    and text:find("Aaron = 2 (bank)", 1, true) and text:find("Total = 33", 1, true), "the item tooltip lists each character's count and the total: " .. text)
+check(text:find("Mirabel") < text:find("Tolan") and text:find("Tolan") < text:find("Aaron"), "most first")
+check(text:find("PlusManz%-Horde") and text:find("PlusManz%-Alliance"), "with each character's faction crest")
+ME.items[0] = { { 765, 1 } }; Fire("BAG_UPDATE_DELAYED")
+check(Hover(765):find("Aaron = 4 (bags 1, bank 3)", 1, true), "bags and bank are told apart")
+check(not Hover(765):find("Total", 1, true), "one character: no total line")
+check(Hover(12345) == "", "an item nobody holds adds nothing")
+check(Hover(SECRET) == "" and Hover(nil) == "", "an item the game withholds adds nothing, without an error")
+SlashCmdList.ALTGLANCE("tooltip")
+check(Hover(2589) == "" and not ns.db.itemTooltip, "/alts tooltip turns the lines off")
+SlashCmdList.ALTGLANCE("tooltip")
+check(Hover(2589) ~= "", "and on again")
+-- /alts find
+local found = ns.FindItems("ore")
+check(#found == 2 and found[1].name == "Copper Ore" and found[2].name == "Tin Ore", "/alts find matches part of a name, ignoring case")
+printed = {}
+SlashCmdList.ALTGLANCE("find LINEN")
+check(#printed == 1 and printed[1]:find("Linen Cloth", 1, true) and printed[1]:find("Mirabel 26, Tolan 5, Aaron 2 (bank)", 1, true),
+    "/alts find prints who holds it: " .. tostring(printed[1]))
+printed = {}
+SlashCmdList.ALTGLANCE("find dragonscale")
+check(#printed == 1 and printed[1]:find("None of your characters", 1, true), "and says so when nobody has it")
+SlashCmdList.ALTGLANCE("find")
+ME.items = nil; ME.bags[-1] = nil; ME.bags[6] = nil
 check(list[1].name == "Aaron" and list[2].name == "Mirabel" and list[3].name == "Tolan", "sorted by level, highest first, to begin with")
 check(list[1].isCurrent and not list[2].isCurrent, "and the one being played is marked")
 
