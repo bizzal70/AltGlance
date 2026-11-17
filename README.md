@@ -10,7 +10,8 @@ AltGlance keeps a line on every character on your account and shows them all in 
 
 | Column | |
 |---|---|
-| Character | Their faction's crest (Horde or Alliance), then their name in their class colour. The row is faintly tinted red for the Horde, blue for the Alliance |
+| Faction | Their faction's crest (Horde or Alliance). The row is faintly tinted red for the Horde, blue for the Alliance |
+| Character | Their name, in their class colour |
 | Level | |
 | Gold | With a total across all characters at the bottom, and each faction's own total (gold cannot cross between them) |
 | Last seen in | The zone they were in |
@@ -19,7 +20,7 @@ AltGlance keeps a line on every character on your account and shows them all in 
 | Bags free | Free slots out of total |
 | Played | How long since you last played them |
 
-Click a column heading to sort by it; click again to reverse. Hover a row for more detail.
+Click a column heading to sort by it; click again to reverse. Sorting by **Faction** puts all your Alliance characters together and all your Horde ones together, highest level first within each. Hover a row for more detail.
 
 ## Using it
 
