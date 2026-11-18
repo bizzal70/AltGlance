@@ -287,6 +287,11 @@ panel.bank.__scripts.OnClick(panel.bank)
 check(ns.BankAlt() == "Player-1" and nameBox.text == "Mirabel Brightwater", "Make Mirabel my bank alt fills her name in on Send Mail")
 -- Sending: 12 stacks a mail, the rest after the first has gone.
 GetMoney = function() return 100000 end
+-- On the Inbox page: AltGlance does not click Blizzard's tab for you (blocked in Forever).
+SendMailFrame = { IsShown = function() return false end }
+panel.send.__scripts.OnClick(panel.send)
+check(#sentMails == 0 and printed[#printed]:find("Open the Send Mail tab first", 1, true), "on the Inbox page it asks you to open Send Mail instead of switching tabs itself")
+SendMailFrame = { IsShown = function() return true end }
 panel.send.__scripts.OnClick(panel.send)
 check(#sentMails == 1 and sentMails[1].to == "Mirabel Brightwater" and sentMails[1].stacks == 12 and sentMails[1].subject == "Materials", "Send mails the first 12 stacks to Mirabel")
 Fire("MAIL_SEND_SUCCESS"); RunTimers()

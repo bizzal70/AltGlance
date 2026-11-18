@@ -269,8 +269,13 @@ function ns.SendNextMail()
     if AttachedCount() > 0 then
         return Finish("The mail being written already has items on it. Send it or take them off, then press Send again.")
     end
-    -- Items are attached on the Send Mail page.
-    if MailFrameTab2 and MailFrameTab2.Click then pcall(MailFrameTab2.Click, MailFrameTab2) end
+    -- Items are attached on the Send Mail page. AltGlance does not switch to
+    -- it for you: clicking Blizzard's tab from an addon set off "blocked
+    -- from an action only available to the Blizzard UI" in Forever (the
+    -- mail still went; 2026-11-17).
+    if SendMailFrame and SendMailFrame.IsShown and not SendMailFrame:IsShown() then
+        return Finish("Open the Send Mail tab first, then press Send again.")
+    end
     local attached = 0
     for _, item in ipairs(items) do
         if attached >= PER_MAIL then break end

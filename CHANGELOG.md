@@ -1,5 +1,9 @@
 # AltGlance
 
+## 0.6.6
+
+- Fixed: pressing Send on the Send materials panel brought up "AltGlance has been blocked from an action only available to the Blizzard UI" (the mail still went). AltGlance no longer switches the mailbox to the Send Mail page itself; if you are on the Inbox, it asks you to open Send Mail first.
+
 ## 0.6.5
 
 - Fixed: Gems on the Send materials panel did not pick up Malachite, Tigerseye or Shadowgem. Forever files gems under trade goods, Other, together with all sorts of reagents, so they are now known by item: the original game's gems and pearls.
