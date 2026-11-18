@@ -437,7 +437,13 @@ function ns.RefreshMailPanel()
 end
 
 local function CreatePanel()
-    panel = CreateFrame("Frame", addonName .. "MailPanel", MailFrame or UIParent)
+    -- Its own window beside the mailbox, not a part of it: in gamepad mode
+    -- Blizzard's mail navigation walks everything inside the mail window,
+    -- and reaching an addon's buttons there got its next step blocked
+    -- ("Interface action failed because of an AddOn", 2026-11-18).
+    panel = CreateFrame("Frame", addonName .. "MailPanel", UIParent)
+    panel:SetFrameStrata("HIGH")
+    panel:SetClampedToScreen(true)
     if MailFrame then
         panel:SetPoint("TOPLEFT", MailFrame, "TOPRIGHT", 6, 0)
     else

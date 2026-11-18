@@ -1,5 +1,9 @@
 # AltGlance
 
+## 0.6.7
+
+- Fixed: in gamepad mode the mailbox could bring up "Interface action failed because of an AddOn" and "AltGlance has been blocked from an action only available to the Blizzard UI", even without pressing Send. The Send materials panel was part of the mail window, so Blizzard's gamepad navigation of that window ran into it; it is now a window of its own beside the mailbox.
+
 ## 0.6.6
 
 - Fixed: pressing Send on the Send materials panel brought up "AltGlance has been blocked from an action only available to the Blizzard UI" (the mail still went). AltGlance no longer switches the mailbox to the Send Mail page itself; if you are on the Inbox, it asks you to open Send Mail first.
