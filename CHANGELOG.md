@@ -1,5 +1,10 @@
 # AltGlance
 
+## 0.7.1
+
+- **Other trade goods** on the Send materials panel (off until you turn it on): every crafting material no other kind covers, such as parts, elemental reagents, meat and spices for cooking, and enchanting materials. Gems, fish and the rest stay with their own kinds.
+- **Your own mail to the bank alt:** put items on the Send Mail page yourself, then press Send on the panel, and that mail goes to your bank alt as it is (then any materials follow). Handy in gamepad mode, where the bank alt's name is not filled in. A mail with money or C.O.D. on it is left for the mailbox's own Send button.
+
 ## 0.7.0
 
 - **Fishing catch** on the Send materials panel (off until you turn it on): raw fish, the other catches such as Oily Blackmouth, Firefin Snapper, Stonescale Eel and Deviate Fish, and clams and clam meat. Meat from hunting stays behind.

@@ -323,7 +323,15 @@ attached = {}
 GetMoney = function() return 100000 end
 attached[1] = { bag = 0, slot = 4 }
 panel.send.__scripts.OnClick(panel.send)
-check(#sentMails == 2 and printed[#printed]:find("already has items on it", 1, true), "a mail already being written is not touched")
+check(#sentMails == 3 and sentMails[3].to == "Mirabel Brightwater" and sentMails[3].stacks == 1 and sentMails[3].subject == "Items",
+    "items you put on the mail yourself: Send mails that mail to the bank alt")
+Fire("MAIL_SEND_SUCCESS"); RunTimers()
+-- ...but never one with money or C.O.D. on it.
+attached[1] = { bag = 0, slot = 1 }
+GetSendMailMoney = function() return 500 end
+panel.send.__scripts.OnClick(panel.send)
+check(#sentMails == 3 and printed[#printed]:find("money or C.O.D.", 1, true), "a mail with money on it is left for the mailbox's own Send")
+GetSendMailMoney = nil
 attached = {}
 -- /alts bank
 SlashCmdList.ALTGLANCE("bank")
@@ -334,6 +342,18 @@ SlashCmdList.ALTGLANCE("bank off")
 check(ns.BankAlt() == nil, "/alts bank off clears it")
 SlashCmdList.ALTGLANCE("bank mira")
 check(ns.BankAlt() == "Player-1", "/alts bank <name> sets it")
+-- Other trade goods: off until turned on; whatever no other kind claims.
+ITEM_NAMES[4363], ITEM_NAMES[2678] = "Copper Modulator", "Mild Spices"
+CATEGORY[4363], CATEGORY[2678] = { 7, 1 }, { 7, 8 }
+ME.items[0] = { { 4363, 1 }, { 2678, 4 }, { 774, 2 }, { 2770, 5 }, { 6291, 3 } }
+ITEM_NAMES[6291] = "Raw Brilliant Smallfish"; CATEGORY[6291] = { 7, 8 }
+for _, key in ipairs({ "ore", "herb", "leather", "cloth" }) do ns.db.mailKinds[key] = false end
+check(#ns.MaterialsToSend() == 0, "other trade goods are never sent unless turned on")
+panel.toggles.other.__scripts.OnClick(panel.toggles.other)
+local others = ns.MaterialsToSend()
+check(#others == 2 and others[1].id == 4363 and others[2].id == 2678, "Other trade goods: parts and spices; not gems, ore or fish, even with those kinds off")
+panel.toggles.other.__scripts.OnClick(panel.toggles.other)
+for _, key in ipairs({ "ore", "herb", "leather", "cloth" }) do ns.db.mailKinds[key] = true end
 -- Fishing catch: off until turned on; raw fish and named catches, not meat.
 ITEM_NAMES[6291], ITEM_NAMES[6358], ITEM_NAMES[2677], ITEM_NAMES[7973] = "Raw Brilliant Smallfish", "Oily Blackmouth", "Boar Ribs", "Big-mouth Clam"
 CATEGORY[6291], CATEGORY[6358], CATEGORY[2677], CATEGORY[7973] = { 7, 8 }, { 7, 8 }, { 7, 8 }, { 15, 0 }
@@ -363,7 +383,7 @@ panel.toggles.disenchant.__scripts.OnClick(panel.toggles.disenchant)
 local gearList = ns.MaterialsToSend()
 check(#gearList == 1 and gearList[1].id == 1000, "turned on: green, blue and purple gear not yet soulbound; not bound gear, not grey")
 panel.send.__scripts.OnClick(panel.send)
-check(#sentMails == 3 and sentMails[3].to == "Mirabel Brightwater" and sentMails[3].stacks == 1, "and it is mailed to the bank alt")
+check(#sentMails == 4 and sentMails[4].to == "Mirabel Brightwater" and sentMails[4].stacks == 1, "and it is mailed to the bank alt")
 Fire("MAIL_SEND_SUCCESS"); RunTimers()
 -- The last check before a mail goes: if the chosen character turns out
 -- to be on the other faction, nothing is sent.

@@ -45,6 +45,11 @@ for _, name in ipairs({ "Oily Blackmouth", "Firefin Snapper", "Stonescale Eel", 
     FISH_NAMES[name] = true
 end
 
+-- Trade goods subclasses that have a kind of their own.
+local OWN_SUBCLASS = {
+    [SUB.MetalAndStone or 7] = true, [SUB.Herb or 9] = true, [SUB.Leather or 6] = true, [SUB.Cloth or 5] = true,
+}
+
 local function TradeGoods(subclass)
     return function(classID, subclassID) return classID == TRADE_GOODS and subclassID == subclass end
 end
@@ -66,6 +71,14 @@ ns.MAIL_KINDS = {
     end },
     -- Recipes, patterns, plans and schematics not yet soulbound.
     { key = "recipes", label = "Recipes & patterns", match = function(classID) return classID == RECIPE end },
+    -- Every other trade good (parts, elemental, meat, enchanting materials
+    -- and so on): anything of class 7 that no other kind claims, even a kind
+    -- that is turned off, so each kind stays its own.
+    { key = "other", label = "Other trade goods", match = function(classID, subclassID, _, itemID, name)
+        if classID ~= TRADE_GOODS or OWN_SUBCLASS[subclassID] or GEM_IDS[itemID] then return false end
+        if subclassID == JEWELCRAFTING then return false end
+        return not (type(name) == "string" and (FISH_NAMES[name] or name:sub(1, 4) == "Raw "))
+    end },
     -- Anything caught fishing: raw fish ("Raw ..."), and the other catches
     -- and clams by name. Not by category: raw fish share theirs with meat.
     { key = "fish", label = "Fishing catch", match = function(classID, _, _, _, name)
@@ -291,10 +304,52 @@ end
 -- Sends the next mail: up to 12 stacks to the chosen character. Called by
 -- the Send button, and again each time a mail has gone, until nothing is
 -- left to send.
+-- Right before a mail goes: still one of your characters on the same faction
+-- and realm, under a full name.
+local function StillMailable(target)
+    local me = ns.CurrentKey()
+    local mine = me and ns.db.chars[me]
+    return mine and CanMail(mine, me, target.key, target.record)
+end
+
+local function BoxText(box)
+    if not (box and box.GetText) then return "" end
+    local ok, text = pcall(box.GetText, box)
+    return (ok and Usable(text) and type(text) == "string") and text or ""
+end
+
+local function MoneyOn(get)
+    if not get then return 0 end
+    local ok, amount = pcall(get)
+    return (ok and Usable(amount) and tonumber(amount)) or 0
+end
+
 function ns.SendNextMail()
     local target = ns.MailTarget()
     if not target then
         return Finish("No other character of yours on this realm and faction to send to yet. A character is offered once you have logged in to them with AltGlance 0.6.1 or later, which learns their full name.")
+    end
+    -- Items you put on the mail yourself: that mail goes to the bank alt as
+    -- it is (with your subject and text, if any), then the materials follow.
+    -- Not a mail with money or C.O.D. on it: that is for the mailbox's own
+    -- Send, so this button never moves gold.
+    local own = AttachedCount()
+    if own > 0 then
+        if MoneyOn(GetSendMailMoney) > 0 or MoneyOn(GetSendMailCOD) > 0 then
+            return Finish("This mail has money or C.O.D. on it: send it with the mailbox's own Send button.")
+        end
+        local okPrice, price = pcall(GetSendMailPrice)
+        if okPrice and Usable(price) and price > GetMoney() then
+            return Finish(("Not enough money for the postage (%s)."):format(ns.Money(price)))
+        end
+        if not StillMailable(target) then
+            return Finish("Not sent: " .. ns.DisplayName(target.record) .. " is not a character of yours on this realm and faction.")
+        end
+        local subject = BoxText(SendMailSubjectEditBox)
+        sending = sending or { to = target.record.fullName, mails = 0, stacks = 0 }
+        sending.pending = own
+        SendMail(target.record.fullName, subject ~= "" and subject or "Items", BoxText(SendMailBodyEditBox))
+        return
     end
     local items = ns.MaterialsToSend()
     if #items == 0 then
@@ -303,9 +358,6 @@ function ns.SendNextMail()
                 sending.mails, sending.mails == 1 and "" or "s", target.record.fullName))
         end
         return Finish("Nothing to send: no materials of the kinds turned on in your bags.")
-    end
-    if AttachedCount() > 0 then
-        return Finish("The mail being written already has items on it. Send it or take them off, then press Send again.")
     end
     -- Items are attached on the Send Mail page. AltGlance does not switch to
     -- it for you: clicking Blizzard's tab from an addon set off "blocked
@@ -333,11 +385,7 @@ function ns.SendNextMail()
     if okPrice and Usable(price) and price > GetMoney() then
         return Finish(("Not enough money for the postage (%s)."):format(ns.Money(price)))
     end
-    -- One last check, right before it goes: still the same faction and
-    -- realm as you, under a full name.
-    local me = ns.CurrentKey()
-    local mine = me and ns.db.chars[me]
-    if not (mine and CanMail(mine, me, target.key, target.record)) then
+    if not StillMailable(target) then
         if ClearSendMail then pcall(ClearSendMail) end
         return Finish("Not sent: " .. ns.DisplayName(target.record) .. " is not a character of yours on this realm and faction.")
     end
@@ -457,17 +505,22 @@ function ns.RefreshMailPanel()
     end
 
     local stacks = #ns.MaterialsToSend()
+    local own = AttachedCount()
     local mails = math.ceil(stacks / PER_MAIL)
     if sending then
         panel.summary:SetText("Sending...")
     elseif not target then
         panel.summary:SetText("Log in to an alt once, and they appear here.")
+    elseif own > 0 and stacks > 0 then
+        panel.summary:SetText("Your mail (" .. Plural(own, "item") .. "), then " .. Plural(stacks, "stack"))
+    elseif own > 0 then
+        panel.summary:SetText("Your mail with " .. Plural(own, "item") .. " on it")
     elseif stacks == 0 then
         panel.summary:SetText("Nothing to send in your bags.")
     else
         panel.summary:SetText(Plural(stacks, "stack") .. " in " .. Plural(mails, "mail"))
     end
-    local ready = target ~= nil and stacks > 0 and not sending
+    local ready = target ~= nil and (stacks > 0 or own > 0) and not sending
     panel.send:SetEnabled(ready)
     panel.send.label:SetText(sending and "Sending..." or "Send")
     panel.send.label:SetTextColor(ready and 1 or 0.5, ready and 0.95 or 0.5, ready and 0.85 or 0.5)
@@ -587,7 +640,8 @@ frame:RegisterEvent("PLAYER_LOGIN")
 frame:SetScript("OnEvent", function(self, event)
     if not ns.db then return end
     if event == "PLAYER_LOGIN" then
-        for _, name in ipairs({ "MAIL_SHOW", "MAIL_CLOSED", "MAIL_SEND_SUCCESS", "MAIL_FAILED", "BAG_UPDATE_DELAYED" }) do
+        for _, name in ipairs({ "MAIL_SHOW", "MAIL_CLOSED", "MAIL_SEND_SUCCESS", "MAIL_FAILED", "BAG_UPDATE_DELAYED",
+                "MAIL_SEND_INFO_UPDATE" }) do
             pcall(self.RegisterEvent, self, name)
         end
         return
