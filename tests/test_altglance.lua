@@ -334,6 +334,15 @@ SlashCmdList.ALTGLANCE("bank off")
 check(ns.BankAlt() == nil, "/alts bank off clears it")
 SlashCmdList.ALTGLANCE("bank mira")
 check(ns.BankAlt() == "Player-1", "/alts bank <name> sets it")
+-- Fishing catch: off until turned on; raw fish and named catches, not meat.
+ITEM_NAMES[6291], ITEM_NAMES[6358], ITEM_NAMES[2677], ITEM_NAMES[7973] = "Raw Brilliant Smallfish", "Oily Blackmouth", "Boar Ribs", "Big-mouth Clam"
+CATEGORY[6291], CATEGORY[6358], CATEGORY[2677], CATEGORY[7973] = { 7, 8 }, { 7, 8 }, { 7, 8 }, { 15, 0 }
+ME.items[0] = { { 6291, 12 }, { 6358, 3 }, { 2677, 5 }, { 7973, 2 } }
+check(#ns.MaterialsToSend() == 0 and not ns.db.mailKinds.fish, "fishing catch is never sent unless turned on")
+panel.toggles.fish.__scripts.OnClick(panel.toggles.fish)
+local caught = ns.MaterialsToSend()
+check(#caught == 3 and caught[1].id == 6291 and caught[2].id == 6358 and caught[3].id == 7973, "Fishing catch: raw fish, Oily Blackmouth and clams; not the boar ribs")
+panel.toggles.fish.__scripts.OnClick(panel.toggles.fish)
 -- Gems and recipes: off until turned on; soulbound recipes never.
 panel.toggles.disenchant.__scripts.OnClick(panel.toggles.disenchant)
 ME.items[0] = { { 774, 7 }, { 818, 1 }, { 6271, 1 }, { 6272, 1, bound = true }, { 999, 3 } }

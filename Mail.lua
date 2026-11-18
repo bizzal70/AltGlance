@@ -34,6 +34,17 @@ for _, id in ipairs({ 774, 818, 1210, 1206, 1705, 1529, 3864, 7909, 7910, 12799,
     GEM_IDS[id] = true
 end
 
+-- What fishing brings up besides fish named "Raw ...": the original game's
+-- catches by name (names, not item IDs, so Forever's own copies match too).
+local FISH_NAMES = {}
+for _, name in ipairs({ "Oily Blackmouth", "Firefin Snapper", "Stonescale Eel", "Deviate Fish",
+        "Darkclaw Lobster", "Winter Squid", "Lightning Eel", "Large Raw Mightfish", "Spinefin Halibut",
+        "Feltail", "Bloodfin Catfish", "Small Barnacled Clam", "Thick-shelled Clam", "Big-mouth Clam",
+        "Soft-shelled Clam", "Clam Meat", "Tangy Clam Meat", "Zesty Clam Meat", "Golden Pearl",
+        "Black Pearl", "Iridescent Pearl", "Small Lustrous Pearl" }) do
+    FISH_NAMES[name] = true
+end
+
 local function TradeGoods(subclass)
     return function(classID, subclassID) return classID == TRADE_GOODS and subclassID == subclass end
 end
@@ -55,6 +66,12 @@ ns.MAIL_KINDS = {
     end },
     -- Recipes, patterns, plans and schematics not yet soulbound.
     { key = "recipes", label = "Recipes & patterns", match = function(classID) return classID == RECIPE end },
+    -- Anything caught fishing: raw fish ("Raw ..."), and the other catches
+    -- and clams by name. Not by category: raw fish share theirs with meat.
+    { key = "fish", label = "Fishing catch", match = function(classID, _, _, _, name)
+        if type(name) ~= "string" then return false end
+        return FISH_NAMES[name] or (name:sub(1, 4) == "Raw " and (classID == TRADE_GOODS or classID == 0))
+    end },
     -- Green, blue and purple weapons and armour that are not soulbound yet
     -- (bind on equip): for a bank alt who disenchants.
     { key = "disenchant", label = "Gear to disenchant", match = function(classID, _, quality)
@@ -233,9 +250,11 @@ function ns.MaterialsToSend()
             local id = info and info.itemID
             if Usable(id) and not info.isBound and not info.isLocked then
                 local ok, _, _, _, _, _, classID, subclassID = pcall(C_Item.GetItemInfoInstant, id)
+                local link = info.hyperlink
+                local name = Usable(link) and type(link) == "string" and link:match("%[(.-)%]") or nil
                 if ok then
                     for _, match in ipairs(wanted) do
-                        if match(classID, subclassID, info.quality, id) then
+                        if match(classID, subclassID, info.quality, id, name) then
                             list[#list + 1] = { bag = bag, slot = slot, id = id, count = info.stackCount or 1 }
                             break
                         end

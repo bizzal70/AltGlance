@@ -1,5 +1,9 @@
 # AltGlance
 
+## 0.7.0
+
+- **Fishing catch** on the Send materials panel (off until you turn it on): raw fish, the other catches such as Oily Blackmouth, Firefin Snapper, Stonescale Eel and Deviate Fish, and clams and clam meat. Meat from hunting stays behind.
+
 ## 0.6.9
 
 - More gamepad-mode fixes at the mailbox: AltGlance no longer hooks into Blizzard's Send Mail page or ties its panel to the mail window (both could make the game block the mailbox's gamepad steps, also when closing it). The Send materials panel now has a close (x) button and always hides when the mailbox closes.

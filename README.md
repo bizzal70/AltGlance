@@ -61,7 +61,7 @@ Each character is shown with their faction's crest, in their class colour, most 
 Open any mailbox and a **Send materials** panel appears beside it:
 
 1. **To:** step through your other characters on the same realm and faction with **<** and **>** (mail cannot cross factions). It starts on your bank alt, or whoever you sent to last.
-2. **What:** turn each kind on or off: **Ore & stone**, **Herbs**, **Leather**, **Cloth**, **Gems**, **Recipes & patterns** (not soulbound), and **Gear to disenchant** (green, blue and purple weapons and armour that are not soulbound yet). The last three are off until you turn them on.
+2. **What:** turn each kind on or off: **Ore & stone**, **Herbs**, **Leather**, **Cloth**, **Gems**, **Recipes & patterns** (not soulbound), **Fishing catch** (raw fish, other catches and clams), and **Gear to disenchant** (green, blue and purple weapons and armour that are not soulbound yet). The last four are off until you turn them on.
 3. **Send** (on the mailbox's Send Mail page): everything chosen is mailed, 12 stacks a mail (the game's limit), one mail after another until all of it is on its way. Chat says what went. You pay the usual postage.
 
 Soulbound items, food and everything else stay in your bags. Every button is big enough to tap, and works with a gamepad. Mail only ever goes to a character's **full name** (first and last, as Shannizz Wolfbane): first names are not unique in Forever. A character is offered once AltGlance knows their full name, which it learns the next time you log in to them, and right before each mail it checks again that it is one of yours on the same realm and faction.
