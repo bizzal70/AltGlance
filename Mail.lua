@@ -150,7 +150,8 @@ function ns.ToggleBankAlt(key)
         ns.db.bankAlt[group] = key
         if ns.CurrentKey() ~= key then ns.db.mailTo[ns.CurrentKey() or ""] = key end
         if record.fullName then
-            ns.Print(record.fullName .. " is now your bank alt: their name is filled in when you open Send Mail.")
+            ns.Print(record.fullName .. " is now your bank alt: their name is filled in when you open Send Mail"
+                .. (ns.GamepadMode() and " (not in gamepad mode, where the game does not allow it: use Send on the Send materials panel)." or "."))
         else
             ns.Print(ns.DisplayName(record) .. " is now your bank alt. Log in to them once so AltGlance learns their full name; until then it is not filled in.")
         end
@@ -160,7 +161,25 @@ function ns.ToggleBankAlt(key)
 end
 
 -- Puts the bank alt's name in the Send Mail "To" box, if it is empty.
+-- Whether the game is in gamepad mode.
+function ns.GamepadMode()
+    if C_GamePad and C_GamePad.IsEnabled then
+        local ok, on = pcall(C_GamePad.IsEnabled)
+        if ok and on then return true end
+    end
+    if GetCVarBool then
+        local ok, on = pcall(GetCVarBool, "GamePadEnable")
+        if ok and on then return true end
+    end
+    return false
+end
+
+-- Not in gamepad mode: typing into Blizzard's To box from an addon leaves
+-- the mail window marked as touched by an addon, and its gamepad steps are
+-- then blocked ("Interface action failed because of an AddOn", seen
+-- 2026-11-18). There, the panel's Send mails to the bank alt instead.
 function ns.FillBankAltName()
+    if ns.GamepadMode() then return end
     local _, record = ns.BankAlt()
     local box = SendMailNameEditBox
     if not record or not box or not box.GetText then return end

@@ -304,6 +304,12 @@ check(ME.items[0][4] ~= nil and ME.items[0][6] ~= nil, "the cloth (turned off) a
 nameBox.text = ""
 Fire("MAIL_SEND_SUCCESS"); RunTimers()
 check(nameBox.text == "Mirabel Brightwater", "after a mail is sent, the bank alt's name is filled in again")
+-- In gamepad mode the To box is never typed into (the game blocks gamepad steps after).
+nameBox.text = ""
+C_GamePad = { IsEnabled = function() return true end }
+Fire("MAIL_SHOW")
+check(nameBox.text == "", "in gamepad mode the bank alt name is not typed into Blizzard's To box")
+C_GamePad = nil
 nameBox.text = "Someone"
 Fire("MAIL_SHOW")
 check(nameBox.text == "Someone", "a name you typed is never replaced")

@@ -68,7 +68,7 @@ Soulbound items, food and everything else stay in your bags. Every button is big
 
 ### Your bank alt
 
-Tick their box in the list's **Bank alt** column, press **Make this my bank alt** on the mailbox panel, or type `/alts bank <name>`, and that character's name is filled in on the mailbox's **Send Mail** page whenever its To box is empty, so you never have to type it. It is filled in again after each mail you send. One bank alt per realm and faction; `/alts bank off` clears it. A name you have typed yourself is never replaced.
+Tick their box in the list's **Bank alt** column, press **Make this my bank alt** on the mailbox panel, or type `/alts bank <name>`, and that character's name is filled in on the mailbox's **Send Mail** page whenever its To box is empty, so you never have to type it. It is filled in again after each mail you send. One bank alt per realm and faction; `/alts bank off` clears it. A name you have typed yourself is never replaced. In gamepad mode the game does not allow an addon to type into that box, so there the name is not filled in: use Send on the Send materials panel, which mails straight to your bank alt.
 
 ## Good to know
 

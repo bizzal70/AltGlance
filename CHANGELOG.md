@@ -1,5 +1,9 @@
 # AltGlance
 
+## 0.6.8
+
+- Fixed: in gamepad mode, "Interface action failed because of an AddOn" and "AltGlance has been blocked" at the mailbox. The cause was AltGlance typing the bank alt's name into the Send Mail To box, which the game does not allow in gamepad mode. There it no longer fills the box; the Send materials panel's Send still mails straight to your bank alt. With mouse and keyboard the name is filled in as before.
+
 ## 0.6.7
 
 - Fixed: in gamepad mode the mailbox could bring up "Interface action failed because of an AddOn" and "AltGlance has been blocked from an action only available to the Blizzard UI", even without pressing Send. The Send materials panel was part of the mail window, so Blizzard's gamepad navigation of that window ran into it; it is now a window of its own beside the mailbox.
