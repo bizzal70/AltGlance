@@ -1,5 +1,9 @@
 # AltGlance
 
+## 0.7.2
+
+- Fixed: the first time a mailbox was opened, the Send materials panel could appear at the far side of the screen instead of beside it. Blizzard puts the mail window in place a moment after it opens; the panel now follows its edge.
+
 ## 0.7.1
 
 - **Other trade goods** on the Send materials panel (off until you turn it on): every crafting material no other kind covers, such as parts, elemental reagents, meat and spices for cooking, and enchanting materials. Gems, fish and the rest stay with their own kinds.

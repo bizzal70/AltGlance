@@ -530,15 +530,25 @@ end
 -- Beside the mailbox: placed at its right edge on the screen, but not tied
 -- to Blizzard's mail window (anchoring to it, or being part of it, made the
 -- game block the mailbox's gamepad steps).
+-- Blizzard puts the mail window in place a moment after the mailbox opens
+-- (the first time, it is still elsewhere when MAIL_SHOW arrives), so the
+-- panel follows its edge while shown instead of reading it once.
+local placedRight, placedTop
 local function PlacePanel()
-    panel:ClearAllPoints()
     local right, top = MailFrame and MailFrame.GetRight and MailFrame:GetRight(), MailFrame and MailFrame.GetTop and MailFrame:GetTop()
-    if type(right) == "number" and type(top) == "number" then
-        local scale = (MailFrame:GetEffectiveScale() or 1) / (UIParent:GetEffectiveScale() or 1)
-        panel:SetPoint("TOPLEFT", UIParent, "BOTTOMLEFT", right * scale + 6, top * scale)
-    else
-        panel:SetPoint("CENTER")
+    if type(right) ~= "number" or type(top) ~= "number" then
+        if placedRight ~= false then
+            panel:ClearAllPoints()
+            panel:SetPoint("CENTER")
+            placedRight, placedTop = false, false
+        end
+        return
     end
+    if right == placedRight and top == placedTop then return end
+    placedRight, placedTop = right, top
+    local scale = (MailFrame:GetEffectiveScale() or 1) / (UIParent:GetEffectiveScale() or 1)
+    panel:ClearAllPoints()
+    panel:SetPoint("TOPLEFT", UIParent, "BOTTOMLEFT", right * scale + 6, top * scale)
 end
 
 local function CreatePanel()
@@ -554,7 +564,11 @@ local function CreatePanel()
     Outline(panel, 0.5)
     -- Gone whenever the mailbox is, even if the closing event is missed.
     panel:SetScript("OnUpdate", function(self)
-        if MailFrame and MailFrame.IsShown and not MailFrame:IsShown() then self:Hide() end
+        if MailFrame and MailFrame.IsShown and not MailFrame:IsShown() then
+            self:Hide()
+            return
+        end
+        PlacePanel()
     end)
 
     local title = Label(panel, "GameFontNormalLarge")

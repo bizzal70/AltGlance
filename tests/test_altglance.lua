@@ -398,6 +398,16 @@ ns.MailTarget = realTarget
 check(#sentMails == before and printed[#printed]:find("Not sent", 1, true), "right before sending, a character of the other faction is refused: " .. tostring(printed[#printed]))
 ns.db.chars["Player-1"].faction = "Alliance"
 attached = {}
+-- The mail window is put in place a moment after the mailbox opens: the panel follows its edge.
+local mailRight = 1900
+MailFrame = { IsShown = function() return true end, GetRight = function() return mailRight end, GetTop = function() return 700 end, GetEffectiveScale = function() return 1 end }
+local placedAt
+rawset(panel, "SetPoint", function(_, a, b, c, x, y) placedAt = x end)
+panel.__scripts.OnUpdate(panel)
+check(placedAt == 1906, "the panel sits at the mail window's right edge")
+mailRight = 400; panel.__scripts.OnUpdate(panel)
+check(placedAt == 406, "and follows it when Blizzard moves the window into place")
+MailFrame = nil
 -- The panel hides itself whenever the mailbox is gone, even without MAIL_CLOSED.
 MailFrame = { IsShown = function() return false end }
 panel.__scripts.OnUpdate(panel)
