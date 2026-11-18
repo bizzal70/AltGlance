@@ -369,6 +369,13 @@ ns.MailTarget = realTarget
 check(#sentMails == before and printed[#printed]:find("Not sent", 1, true), "right before sending, a character of the other faction is refused: " .. tostring(printed[#printed]))
 ns.db.chars["Player-1"].faction = "Alliance"
 attached = {}
+-- The panel hides itself whenever the mailbox is gone, even without MAIL_CLOSED.
+MailFrame = { IsShown = function() return false end }
+panel.__scripts.OnUpdate(panel)
+check(not panel:IsShown(), "with the mailbox gone, the panel hides itself")
+MailFrame = nil
+Fire("MAIL_SHOW")
+check(panel:IsShown(), "and comes back with the next mailbox")
 Fire("MAIL_CLOSED")
 check(not panel:IsShown(), "closing the mailbox hides the panel")
 ME.items = nil; ME.bags[1] = { 8, 2 }

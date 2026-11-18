@@ -455,6 +455,20 @@ function ns.RefreshMailPanel()
     panel.send.bg:SetColorTexture(ready and 0.45 or 0.14, ready and 0.30 or 0.11, ready and 0.12 or 0.08, 1)
 end
 
+-- Beside the mailbox: placed at its right edge on the screen, but not tied
+-- to Blizzard's mail window (anchoring to it, or being part of it, made the
+-- game block the mailbox's gamepad steps).
+local function PlacePanel()
+    panel:ClearAllPoints()
+    local right, top = MailFrame and MailFrame.GetRight and MailFrame:GetRight(), MailFrame and MailFrame.GetTop and MailFrame:GetTop()
+    if type(right) == "number" and type(top) == "number" then
+        local scale = (MailFrame:GetEffectiveScale() or 1) / (UIParent:GetEffectiveScale() or 1)
+        panel:SetPoint("TOPLEFT", UIParent, "BOTTOMLEFT", right * scale + 6, top * scale)
+    else
+        panel:SetPoint("CENTER")
+    end
+end
+
 local function CreatePanel()
     -- Its own window beside the mailbox, not a part of it: in gamepad mode
     -- Blizzard's mail navigation walks everything inside the mail window,
@@ -463,19 +477,22 @@ local function CreatePanel()
     panel = CreateFrame("Frame", addonName .. "MailPanel", UIParent)
     panel:SetFrameStrata("HIGH")
     panel:SetClampedToScreen(true)
-    if MailFrame then
-        panel:SetPoint("TOPLEFT", MailFrame, "TOPRIGHT", 6, 0)
-    else
-        panel:SetPoint("CENTER")
-    end
     panel:EnableMouse(true)
     Fill(panel, 0.06, 0.06, 0.07, 0.96)
     Outline(panel, 0.5)
+    -- Gone whenever the mailbox is, even if the closing event is missed.
+    panel:SetScript("OnUpdate", function(self)
+        if MailFrame and MailFrame.IsShown and not MailFrame:IsShown() then self:Hide() end
+    end)
 
     local title = Label(panel, "GameFontNormalLarge")
     title:SetPoint("TOPLEFT", PAD, -PAD)
     title:SetText("Send materials")
     title:SetTextColor(1, 0.85, 0.6)
+
+    -- Close (x), big enough to tap.
+    local close = Button(panel, 28, 28, "x", function() panel:Hide() end)
+    close:SetPoint("TOPRIGHT", -6, -6)
 
     -- Send to:  [<]  Name Surname  [>]
     local y = -42
@@ -560,11 +577,11 @@ frame:SetScript("OnEvent", function(self, event)
         Settings()
         if not panel then CreatePanel() end
         panel:Show()
-        -- The bank alt's name, whenever the Send Mail page opens.
-        if SendMailFrame and SendMailFrame.HookScript and not ns.sendMailHooked then
-            ns.sendMailHooked = true
-            SendMailFrame:HookScript("OnShow", function() pcall(ns.FillBankAltName) end)
-        end
+        PlacePanel()
+        -- No hook on Blizzard's Send Mail page: an addon's code running
+        -- inside Blizzard's mail code marks it as touched, and in gamepad
+        -- mode its next steps were blocked (2026-11-18). The name is filled
+        -- in here, from the game's event, and after each mail.
         pcall(ns.FillBankAltName)
     elseif event == "MAIL_CLOSED" then
         if sending then Finish("The mailbox was closed, so sending stopped.") end
