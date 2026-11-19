@@ -1,5 +1,13 @@
 # AltGlance
 
+## 0.8.0
+
+- **Profession planner** (`/alts prof`, or the new **Professions** button in the list). Open a profession window once on each character and AltGlance records their recipes. Then, for any of your characters' professions:
+  - every recipe they know, green when they can make it now with what they hold, yellow with a * when they can with materials from your other characters, and how many;
+  - for the chosen recipe: each material, how many it takes, how many the crafter has, which of your characters holds the rest (a character on the other faction is marked, as mail cannot cross factions), and what is still to buy or gather;
+  - Make: choose how many, or Most for as many as your characters' materials allow.
+- **Add to plan**, then **Planned for crafting** on the Send materials panel: at the mailbox on your other characters, the materials the plan needs are sent to the crafter (the panel switches to them and says so). Materials the crafter already has enough of stay put. **Clear plan** in the planner empties it.
+
 ## 0.7.2
 
 - Fixed: the first time a mailbox was opened, the Send materials panel could appear at the far side of the screen instead of beside it. Blizzard puts the mail window in place a moment after it opens; the panel now follows its edge.

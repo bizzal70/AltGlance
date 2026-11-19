@@ -33,6 +33,7 @@ A character appears in the list once you have logged in to them with AltGlance e
 |---|---|
 | `/alts` | Open the list |
 | `/alts find <item>` | Which of your characters has an item, in bags or bank: `/alts find linen` |
+| `/alts prof` | The profession planner (also the **Professions** button in the list) |
 | `/alts tooltip` | Item tooltips showing each character's count, on or off |
 | `/alts bank <name>` | Your bank alt, whose name the mailbox fills in (`/alts bank off` to clear) |
 | `/alts forget <name>` | Remove a character you no longer have |
@@ -56,12 +57,23 @@ Each character is shown with their faction's crest, in their class colour, most 
 - **The bank** can only be read while it is open, so each character's bank is counted the first time they open it with AltGlance 0.5.0 or later, and kept up to date each time after.
 - Mail and items you are wearing are not counted.
 
+## Profession planner
+
+Open a profession window (Tailoring, Enchanting, Alchemy...) once on each character, and AltGlance records the recipes they know. Then type `/alts prof`, or press **Professions** in the list:
+
+- Step through your characters' professions with **<** and **>**. The list shows every recipe they know: **green** when they can make it now with what they hold, **yellow \*** when they can with materials from your other characters, with how many.
+- Choose a recipe to see each material it takes, how many the crafter has, and which of your characters holds the rest. Characters on the other faction are marked, as mail cannot cross factions. Anything still to buy or gather is listed underneath. Hover over a material for its tooltip.
+- Choose how many to make (**Most** sets as many as your characters' materials allow), then **Add to plan**.
+- Log in to a character holding planned materials and open a mailbox: the Send materials panel is set to send to the crafter, and **Planned for crafting** mails what the plan still needs. Materials the crafter already has enough of stay put.
+
+The filter at the top right shows all recipes, those you can make now, or those you can make with your alts' help. Counts come from each character's bags, and their bank as of their last visit to it.
+
 ## Send materials to an alt
 
 Open any mailbox and a **Send materials** panel appears beside it:
 
 1. **To:** step through your other characters on the same realm and faction with **<** and **>** (mail cannot cross factions). It starts on your bank alt, or whoever you sent to last.
-2. **What:** turn each kind on or off: **Ore & stone**, **Herbs**, **Leather**, **Cloth**, **Gems**, **Recipes & patterns** (not soulbound), **Fishing catch** (raw fish, other catches and clams), **Other trade goods** (every other crafting material), and **Gear to disenchant** (green, blue and purple weapons and armour that are not soulbound yet). The last five are off until you turn them on.
+2. **What:** turn each kind on or off: **Planned for crafting** (the profession planner's plan, sent to its crafter), **Ore & stone**, **Herbs**, **Leather**, **Cloth**, **Gems**, **Recipes & patterns** (not soulbound), **Fishing catch** (raw fish, other catches and clams), **Other trade goods** (every other crafting material), and **Gear to disenchant** (green, blue and purple weapons and armour that are not soulbound yet). The last five are off until you turn them on.
 3. **Send** (on the mailbox's Send Mail page): everything chosen is mailed, 12 stacks a mail (the game's limit), one mail after another until all of it is on its way. Chat says what went. You pay the usual postage.
 
 Soulbound items, food and everything else stay in your bags. You can also put any items on the Send Mail page yourself and press the panel's Send: that mail goes to your bank alt as it is (not one with money or C.O.D. on it, which is for the mailbox's own Send). Every button is big enough to tap, and works with a gamepad. Mail only ever goes to a character's **full name** (first and last, as Shannizz Wolfbane): first names are not unique in Forever. A character is offered once AltGlance knows their full name, which it learns the next time you log in to them, and right before each mail it checks again that it is one of yours on the same realm and faction.

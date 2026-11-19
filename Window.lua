@@ -406,6 +406,21 @@ local function CreateWindow()
     end
     close:SetScript("OnClick", function() window:Hide() end)
 
+    -- Opens the profession planner.
+    local planner = CreateFrame("Button", nil, header)
+    planner:SetSize(110, HEADER_HEIGHT - 12)
+    planner:SetPoint("RIGHT", close, "LEFT", -8, 0)
+    Fill(planner, 0.30, 0.22, 0.12, 1)
+    Outline(planner, 0.6)
+    local plannerHover = planner:CreateTexture(nil, "HIGHLIGHT")
+    plannerHover:SetAllPoints()
+    plannerHover:SetColorTexture(1, 1, 1, 0.12)
+    local plannerLabel = Label(planner, "GameFontHighlight", "CENTER")
+    plannerLabel:SetPoint("CENTER")
+    plannerLabel:SetText("Professions")
+    planner:SetScript("OnClick", function() ns.TogglePlanner() end)
+    window.plannerButton = planner
+
     -- Column headings; the sortable ones are buttons.
     local x = PADDING + 8
     for _, column in ipairs(COLUMNS) do

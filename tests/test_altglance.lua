@@ -501,3 +501,111 @@ SlashCmdList.ALTGLANCE("help")
 UnitXPMax = function() error("something this client does differently") end
 local ok = pcall(Fire, "PLAYER_XP_UPDATE")
 check(ok, "a surprise from the game while recording does not raise an error")
+
+UnitXPMax = function() return ME.xpMax end
+
+-- The profession planner. Aaron (Alliance, being played) is the crafter;
+-- Bizz is Alliance on the same realm, Hordie is Horde.
+ITEM_NAMES[2320], ITEM_NAMES[2996] = "Coarse Thread", "Bolt of Linen Cloth"
+CATEGORY[2320] = { 7, 11 }
+ME.items = { [0] = { { 2589, 3 } } }
+Fire("BAG_UPDATE_DELAYED")
+ns.db.chars["Player-3"].fullName = "Aaron Stone"
+ns.db.chars["Player-3"].bankItems = {}
+ns.db.chars["Player-5"] = { name = "Bizz", fullName = "Bizz Wolf", realm = "Stonehold", faction = "Alliance", classFile = "MAGE",
+    bagItems = { [2589] = 30, [2320] = 2 }, bankItems = {} }
+ns.db.chars["Player-6"] = { name = "Hordie", fullName = "Hordie Grim", realm = "Stonehold", faction = "Horde",
+    bagItems = { [2320] = 9 } }
+local RECIPES = {
+    [101] = { name = "Bolt of Linen Cloth", learned = true, out = 2996, reagents = { { 2589, 2 } } },
+    [102] = { name = "Linen Bag", learned = true, reagents = { { 2589, 4 }, { 2320, 1 } } },
+    [103] = { name = "Not Learned Yet", learned = false, reagents = { { 2589, 1 } } },
+}
+local linked = false
+Enum.CraftingReagentType = { Modifying = 0, Basic = 1 }
+C_TradeSkillUI = {
+    GetBaseProfessionInfo = function() return { professionName = "Tailoring" } end,
+    GetAllRecipeIDs = function() return { 101, 102, 103 } end,
+    GetRecipeInfo = function(id) return { name = RECIPES[id].name, learned = RECIPES[id].learned } end,
+    GetRecipeSchematic = function(id)
+        local recipe, slots = RECIPES[id], {}
+        for _, r in ipairs(recipe.reagents) do
+            slots[#slots + 1] = { reagents = { { itemID = r[1] } }, quantityRequired = r[2], required = true, reagentType = 1 }
+        end
+        -- An optional extra (a modifying reagent) is not a material it needs.
+        slots[#slots + 1] = { reagents = { { itemID = 9999 } }, quantityRequired = 1, required = false, reagentType = 0 }
+        return { name = recipe.name, outputItemID = recipe.out, reagentSlotSchematics = slots }
+    end,
+    IsTradeSkillLinked = function() return linked end,
+}
+Fire("TRADE_SKILL_SHOW"); RunTimers()
+local book = ns.db.recipes["Player-3"] and ns.db.recipes["Player-3"].Tailoring
+check(book and #book.list == 2 and book.list[1].name == "Bolt of Linen Cloth" and book.list[2].name == "Linen Bag",
+    "opening a profession window records the recipes learned, A to Z")
+check(#book.list[2].reagents == 2 and book.list[1].out == 2996, "with the materials each needs, not optional extras")
+check(printed[#printed]:find("Recorded 2 Tailoring recipes", 1, true) ~= nil, "and says so the first time: " .. tostring(printed[#printed]))
+linked = true
+ns.db.recipes["Player-3"] = nil
+Fire("TRADE_SKILL_SHOW"); RunTimers()
+check(ns.db.recipes["Player-3"] == nil, "someone else's linked profession is not recorded")
+linked = false
+Fire("TRADE_SKILL_SHOW"); RunTimers()
+book = ns.db.recipes["Player-3"].Tailoring
+
+local own, all = ns.Makeable("Player-3", book.list[1])
+check(own == 1 and all == 16, "Bolt of Linen: 1 with Aaron's own linen, 16 with Bizz's too")
+own, all = ns.Makeable("Player-3", book.list[2])
+check(own == 0 and all == 2, "Linen Bag: none alone, 2 with Bizz's thread (the Horde character's cannot be mailed)")
+local mine, alts, others = ns.ReagentStock("Player-3", 2320)
+check(mine == 0 and alts == 2 and #others == 2 and others[1].record.name == "Hordie" and not others[1].mailable and others[2].mailable,
+    "who holds a material: every character, the other faction marked as not mailable")
+
+-- the window
+SlashCmdList.ALTGLANCE("prof")
+check(AltGlancePlanner:IsShown(), "/alts prof opens the planner")
+local function Shown(text)
+    for _, f in ipairs(Frames()) do
+        local t = rawget(f, "__text")
+        if t and t:find(text, 1, true) then return f end
+    end
+end
+check(Shown("Aaron Stone  -  Tailoring (2)") ~= nil, "it starts on the character being played and their profession")
+check(Shown("x1") and Shown("x2 *"), "each recipe shows how many can be made, * when it needs materials from alts")
+check(Shown("1 from alts") ~= nil or Shown("Ready") ~= nil, "the chosen recipe lists its materials and where they come from")
+AltGlancePlanner.filter.__scripts.OnClick(AltGlancePlanner.filter)
+check(ns.db.plannerFilter == "now", "the filter steps to recipes that can be made now")
+AltGlancePlanner.filter.__scripts.OnClick(AltGlancePlanner.filter)
+AltGlancePlanner.filter.__scripts.OnClick(AltGlancePlanner.filter)
+check(ns.db.plannerFilter == "all", "and back round to all")
+AltGlanceWindow.plannerButton.__scripts.OnClick(AltGlanceWindow.plannerButton)
+check(not AltGlancePlanner:IsShown(), "the Professions button in the list toggles the planner")
+AltGlanceWindow.plannerButton.__scripts.OnClick(AltGlanceWindow.plannerButton)
+
+-- the plan, and sending its materials from another character
+ns.PlanAdd("Player-3", "Tailoring", book.list[2], 2)
+local needs, to = ns.PlanNeeds()
+check(to == "Player-3" and needs[2589] == 8 and needs[2320] == 2, "a plan of 2 Linen Bags needs 8 linen and 2 thread")
+ns.PlanAdd("Player-3", "Tailoring", book.list[2], 1)
+check(#ns.db.plan.items == 1 and ns.db.plan.items[1].count == 3, "adding the same recipe again adds to its count")
+ns.db.plan.items[1].count = 2
+AltGlancePlanner:Hide()
+
+ME = { guid = "Player-5", name = "Bizz", class = "Mage", classFile = "MAGE", level = 20, money = 50000, zone = "Stormwind",
+    xp = 1, xpMax = 10, rested = 0, resting = true, professions = {},
+    bags = { [0] = { 16, 10 }, { 0, 0 }, { 0, 0 }, { 0, 0 }, { 0, 0 } },
+    items = { [0] = { { 2589, 20 }, { 2589, 10 }, { 2320, 2 }, { 2770, 5 } } } }
+Fire("BAG_UPDATE_DELAYED")
+ns.db.mailKinds.cloth, ns.db.mailKinds.ore = false, false
+ns.db.mailTo["Player-5"] = nil
+Fire("MAIL_SHOW")
+check(ns.MailTarget().key == "Player-3" and printed[#printed]:find("planned for Aaron Stone", 1, true) ~= nil,
+    "at the mailbox, a character holding planned materials is set to send to the crafter")
+check(ns.db.mailKinds.planned and #ns.MaterialsToSend() == 3, "Planned for crafting picks the linen and thread, nothing else")
+ns.db.chars["Player-3"].bagItems[2589] = 8
+check(#ns.MaterialsToSend() == 1, "materials the crafter already has enough of are not sent")
+ns.db.mailTo["Player-5"] = "Player-1"
+check(not ns.PlanWants(2320) or ns.MailTarget().key == "Player-3", "planned materials only go to the crafter")
+Fire("MAIL_CLOSED")
+SlashCmdList.ALTGLANCE("prof")
+AltGlancePlanner.clear.__scripts.OnClick(AltGlancePlanner.clear)
+check(ns.db.plan == nil and #ns.MaterialsToSend() == 0, "Clear plan empties it")

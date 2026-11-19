@@ -266,6 +266,8 @@ SlashCmdList.ALTGLANCE = function(msg)
         ns.Print("Minimap button " .. (ns.db.minimapButton and "shown." or "hidden."))
     elseif command == "find" then
         ns.PrintFind(rest)
+    elseif command == "prof" or command == "plan" or command == "professions" then
+        if rest:lower() == "debug" then ns.PlannerDebug() else ns.TogglePlanner() end
     elseif command == "bank" then
         if rest == "" then
             local _, record = ns.BankAlt()
@@ -309,6 +311,7 @@ SlashCmdList.ALTGLANCE = function(msg)
     else
         ns.Print("/alts - open the list of your characters")
         ns.Print("/alts find <item> - which of your characters has an item, in bags or bank")
+        ns.Print("/alts prof - the profession planner: what you can make, and who holds the materials")
         ns.Print("/alts tooltip - item tooltips showing each character's count, on or off")
         ns.Print("/alts bank <name> - your bank alt, whose name the mailbox fills in (/alts bank off to clear)")
         ns.Print("/alts forget <name> - remove a character you no longer have")

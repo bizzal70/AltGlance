@@ -58,6 +58,11 @@ end
 -- whether an item (by class, subclass and quality) is one of it. The first
 -- four start on; the rest are off until turned on.
 ns.MAIL_KINDS = {
+    -- What the profession planner's plan needs, while sending to the crafter
+    -- (Planner.lua). Only ever matches when there is a plan.
+    { key = "planned", label = "Planned for crafting", match = function(_, _, _, itemID)
+        return ns.PlanWants ~= nil and ns.PlanWants(itemID) or false
+    end },
     { key = "ore", label = "Ore & stone", match = TradeGoods(SUB.MetalAndStone or 7) },
     { key = "herb", label = "Herbs", match = TradeGoods(SUB.Herb or 9) },
     { key = "leather", label = "Leather", match = TradeGoods(SUB.Leather or 6) },
@@ -107,6 +112,7 @@ local function Settings()
     if not ns.db.mailKinds then
         ns.db.mailKinds = { ore = true, herb = true, leather = true, cloth = true }
     end
+    if ns.db.mailKinds.planned == nil then ns.db.mailKinds.planned = true end
     ns.db.mailTo = ns.db.mailTo or {}
     ns.db.bankAlt = ns.db.bankAlt or {}
 end
