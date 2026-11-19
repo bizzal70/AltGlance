@@ -346,12 +346,13 @@ end
 ---------------------------------------------------------------------------
 
 local ACCENT_R, ACCENT_G, ACCENT_B = 0.85, 0.63, 0.40
-local WIDTH, HEIGHT, PAD = 740, 500, 12
+local WIDTH, HEIGHT, PAD = 740, 560, 12
 local HEADER = 38
-local LIST_TOP, LIST_WIDTH, ROW_HEIGHT, ROWS = 92, 300, 22, 15
+local LIST_TOP, LIST_WIDTH, ROW_HEIGHT, ROWS = 92, 300, 22, 18
 local DETAIL_LEFT = PAD + LIST_WIDTH + 16
 local DETAIL_WIDTH = WIDTH - DETAIL_LEFT - PAD
-local REAGENT_ROWS, REAGENT_HEIGHT = 8, 28
+local REAGENT_ROWS, REAGENT_HEIGHT = 7, 30
+local ACTION_HEIGHT = 32
 local FILTERS = {
     { key = "all", label = "All recipes" },
     { key = "now", label = "Can make now" },
@@ -464,17 +465,27 @@ local function PlanText()
     return ("Plan for %s: %s."):format(ns.DisplayName(ns.db.chars[plan.to]), table.concat(parts, ", "))
 end
 
+-- "Alts: Bizzall 8, Shannizz 8   +16 on the other faction"
 local function OthersText(others)
-    local parts = {}
-    for index, other in ipairs(others) do
-        if index > 3 then
-            parts[#parts + 1] = "..."
-            break
+    local parts, more, elsewhere = {}, 0, 0
+    for _, other in ipairs(others) do
+        if not other.mailable then
+            elsewhere = elsewhere + other.count
+        elseif #parts < 3 then
+            parts[#parts + 1] = ("%s %d"):format(other.record.name or ns.DisplayName(other.record), other.count)
+        else
+            more = more + other.count
         end
-        parts[#parts + 1] = ("%s %d%s"):format(other.record.name or ns.DisplayName(other.record), other.count,
-            other.mailable and "" or " (can't mail)")
     end
-    return table.concat(parts, ", ")
+    local text = ""
+    if #parts > 0 then
+        text = "Alts: " .. table.concat(parts, ", ")
+        if more > 0 then text = text .. (", others %d"):format(more) end
+    end
+    if elsewhere > 0 then
+        text = text .. (text ~= "" and "   " or "") .. ("+%d on the other faction"):format(elsewhere)
+    end
+    return text
 end
 
 local function RefreshDetail(crafter, entry)
@@ -504,7 +515,8 @@ local function RefreshDetail(crafter, entry)
             local mine, alts, others = ns.ReagentStock(crafter.key, reagent.id)
             row.id = reagent.id
             row.name:SetText(("%s  x%d"):format(ReagentName(reagent), need))
-            row.who:SetText(("%s %d%s"):format(who, mine, #others > 0 and ("   " .. OthersText(others)) or ""))
+            local elsewhere = OthersText(others)
+            row.who:SetText(("%s has %d%s"):format(who, mine, elsewhere ~= "" and ("   |cff808080-|r   " .. elsewhere) or ""))
             if mine >= need then
                 row.state:SetText("Ready")
                 row.state:SetTextColor(0.4, 0.9, 0.4)
@@ -522,6 +534,10 @@ local function RefreshDetail(crafter, entry)
             row.id = nil
             row:Hide()
         end
+    end
+    local hidden = #recipe.reagents - REAGENT_ROWS
+    if hidden > 0 then
+        short[#short + 1] = ("and %d more material%s not shown"):format(hidden, hidden == 1 and "" or "s")
     end
     if #short > 0 then
         detail.short:SetText("To buy or gather: " .. table.concat(short, ", ") .. ".")
@@ -542,6 +558,7 @@ local function RefreshDetail(crafter, entry)
         craft.label:SetText("Craft")
     end
     local ready = count ~= nil or action == "open"
+    detail.note:SetText(count and "" or (reason or ""))
     craft.label:SetTextColor(ready and 1 or 0.5, ready and 0.95 or 0.5, ready and 0.85 or 0.5)
     craft.bg:SetColorTexture(ready and 0.45 or 0.14, ready and 0.30 or 0.11, ready and 0.12 or 0.08, 1)
 end
@@ -741,33 +758,35 @@ local function CreateWindow()
     detail.makes:SetPoint("TOPLEFT", 4, -24)
     detail.makes:SetWidth(DETAIL_WIDTH - 8)
 
-    -- Make:  [-]  2  [+]  [Most]        [Add to plan]
+    -- Make:  [-]  2  [+]  [Most]
     local amount = Label(detail, "GameFontHighlight")
-    amount:SetPoint("TOPLEFT", 4, -54)
+    amount:SetPoint("TOPLEFT", 4, -55)
     amount:SetText("Make:")
-    local minus = Button(detail, 28, 26, "-", function() SetQuantity(quantity - 1) end)
-    minus:SetPoint("TOPLEFT", 50, -48)
+    local minus = Button(detail, 30, 28, "-", function() SetQuantity(quantity - 1) end)
+    minus:SetPoint("TOPLEFT", 52, -48)
     detail.count = Label(detail, "GameFontHighlightLarge", "CENTER")
-    detail.count:SetPoint("TOPLEFT", 80, -54)
-    detail.count:SetWidth(40)
-    local plus = Button(detail, 28, 26, "+", function() SetQuantity(quantity + 1) end)
-    plus:SetPoint("TOPLEFT", 122, -48)
-    local most = Button(detail, 56, 26, "Most", function()
+    detail.count:SetPoint("LEFT", minus, "RIGHT", 4, 0)
+    detail.count:SetWidth(44)
+    local plus = Button(detail, 30, 28, "+", function() SetQuantity(quantity + 1) end)
+    plus:SetPoint("LEFT", minus, "RIGHT", 52, 0)
+    local most = Button(detail, 64, 28, "Most", function()
         local crafter = Current()
         for _, entry in ipairs(recipes) do
             if crafter and entry.recipe.name == selected then SetQuantity(math.max(entry.all, 1)) end
         end
     end)
-    most:SetPoint("TOPLEFT", 156, -48)
+    most:SetPoint("LEFT", plus, "RIGHT", 8, 0)
     -- Craft: makes it, if this is the crafter and their profession window
     -- is open (the game crafts only from there).
-    local craft = Button(detail, 112, 26, "Craft", function()
+    local half = (DETAIL_WIDTH - 8 - 8) / 2
+    local craft = Button(detail, half, ACTION_HEIGHT, "Craft", function()
         local crafter = Current()
         local recipe = crafter and FindRecipe(crafter.key, crafter.profession, selected)
         if recipe then ns.Craft(crafter, recipe, quantity) end
         Refresh()
     end)
-    craft:SetPoint("TOPRIGHT", -108, -48)
+    craft:SetPoint("BOTTOMLEFT", 4, 0)
+    craft.label:SetFontObject("GameFontNormal")
     craft:SetScript("OnEnter", function(self)
         GameTooltip:SetOwner(self, "ANCHOR_TOP")
         GameTooltip:AddLine("Craft", 1, 1, 1)
@@ -776,7 +795,7 @@ local function CreateWindow()
     end)
     craft:SetScript("OnLeave", function() GameTooltip:Hide() end)
     window.craft = craft
-    local add = Button(detail, 100, 26, "Add to plan", function()
+    local add = Button(detail, half, ACTION_HEIGHT, "Add to plan", function()
         local crafter = Current()
         local recipe = crafter and FindRecipe(crafter.key, crafter.profession, selected)
         if not recipe then return end
@@ -785,15 +804,20 @@ local function CreateWindow()
             quantity, recipe.name, ns.DisplayName(crafter.record)))
         Refresh()
     end)
-    add:SetPoint("TOPRIGHT", -4, -48)
+    add:SetPoint("BOTTOMRIGHT", -4, 0)
+    add.label:SetFontObject("GameFontNormal")
     window.add = add
+    -- Why Craft cannot be pressed, just above it.
+    detail.note = Label(detail, "GameFontDisableSmall")
+    detail.note:SetPoint("BOTTOMLEFT", 4, ACTION_HEIGHT + 8)
+    detail.note:SetWidth(DETAIL_WIDTH - 8)
 
     detail.heading = Label(detail, "GameFontDisableSmall")
-    detail.heading:SetPoint("TOPLEFT", 4, -84)
+    detail.heading:SetPoint("TOPLEFT", 4, -88)
     detail.heading:SetTextColor(ACCENT_R, ACCENT_G, ACCENT_B)
-    for index = 1, REAGENT_ROWS do CreateReagentRow(detail, index, -100) end
+    for index = 1, REAGENT_ROWS do CreateReagentRow(detail, index, -104) end
     detail.short = Label(detail, "GameFontHighlightSmall")
-    detail.short:SetPoint("TOPLEFT", 4, -(100 + REAGENT_ROWS * REAGENT_HEIGHT + 6))
+    detail.short:SetPoint("TOPLEFT", 4, -(104 + REAGENT_ROWS * REAGENT_HEIGHT + 8))
     detail.short:SetWidth(DETAIL_WIDTH - 8)
     detail.short:SetWordWrap(true)
 

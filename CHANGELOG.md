@@ -1,5 +1,9 @@
 # AltGlance
 
+## 0.8.2
+
+- Profession planner tidied up: **Craft** and **Add to plan** are now two large buttons along the bottom (Craft no longer overlaps Most), with the reason Craft can't be pressed shown just above it. Each material's line reads "Shannbizz has 2 - Alts: Bizzall 8, Shannizz 8 +7 on the other faction": the characters who can mail it come first, the other faction is summed up. The window is a little taller, showing more recipes and materials.
+
 ## 0.8.1
 
 - **Craft** in the profession planner: makes the chosen recipe, the number set under Make (as many as the materials in your bags allow). It works on the character who knows the recipe; if their profession window is closed, the button opens it, then press Craft. Open each profession window once after updating so AltGlance learns how to craft each recipe.
