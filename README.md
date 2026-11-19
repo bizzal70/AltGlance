@@ -63,7 +63,7 @@ Open a profession window (Tailoring, Enchanting, Alchemy...) once on each charac
 
 - Step through your characters' professions with **<** and **>**. The list shows every recipe they know: **green** when they can make it now with what they hold, **yellow \*** when they can with materials from your other characters, with how many.
 - Choose a recipe to see each material it takes, how many the crafter has, and which of your characters holds the rest. Characters on the other faction are marked, as mail cannot cross factions. Anything still to buy or gather is listed underneath. Hover over a material for its tooltip.
-- Choose how many to make (**Most** sets as many as your characters' materials allow), then **Add to plan**.
+- Choose how many to make (**Most** sets as many as your characters' materials allow), then **Craft** to make them (on the crafter, with their profession window open; if it is closed the button opens it), or **Add to plan** to gather the materials first.
 - Log in to a character holding planned materials and open a mailbox: the Send materials panel is set to send to the crafter, and **Planned for crafting** mails what the plan still needs. Materials the crafter already has enough of stay put.
 
 The filter at the top right shows all recipes, those you can make now, or those you can make with your alts' help. Counts come from each character's bags, and their bank as of their last visit to it.

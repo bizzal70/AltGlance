@@ -609,3 +609,35 @@ Fire("MAIL_CLOSED")
 SlashCmdList.ALTGLANCE("prof")
 AltGlancePlanner.clear.__scripts.OnClick(AltGlancePlanner.clear)
 check(ns.db.plan == nil and #ns.MaterialsToSend() == 0, "Clear plan empties it")
+
+-- Crafting from the planner.
+local crafted, opened = {}, {}
+C_TradeSkillUI.GetBaseProfessionInfo = function() return { professionName = "Tailoring", professionID = 197 } end
+C_TradeSkillUI.GetRecipeInfo = function(id) return { name = RECIPES[id].name, learned = RECIPES[id].learned, numAvailable = 4 } end
+C_TradeSkillUI.CraftRecipe = function(id, count) crafted[#crafted + 1] = { id = id, count = count } end
+C_TradeSkillUI.OpenTradeSkill = function(line) opened[#opened + 1] = line end
+local aaronBook = ns.db.recipes["Player-3"].Tailoring
+local crafterEntry = { key = "Player-3", record = ns.db.chars["Player-3"], profession = "Tailoring", list = aaronBook.list }
+local count, reason = ns.CraftState(crafterEntry, aaronBook.list[1], 10)
+check(count == nil and reason:find("Log in to Aaron Stone", 1, true), "another character's recipe cannot be crafted from here: " .. tostring(reason))
+ME.guid = "Player-3"
+Fire("TRADE_SKILL_CLOSE")
+Fire("TRADE_SKILL_SHOW"); RunTimers()
+aaronBook = ns.db.recipes["Player-3"].Tailoring
+check(aaronBook.list[1].id == 101 and aaronBook.skillLine == 197, "each recipe's ID and the profession are remembered for crafting")
+count = ns.CraftState(crafterEntry, aaronBook.list[1], 10)
+check(count == 4, "with the profession window open, it crafts as many as wanted and the bags allow")
+ns.TogglePlanner(); ns.TogglePlanner()
+check(AltGlancePlanner:IsShown() and AltGlancePlanner.craft.label:GetText() == "Craft 1", "the Craft button shows how many it will make: " .. tostring(AltGlancePlanner.craft.label:GetText()))
+AltGlancePlanner.craft.__scripts.OnClick(AltGlancePlanner.craft)
+check(#crafted == 1 and crafted[1].id == 101 and crafted[1].count == 1, "pressing Craft crafts the chosen recipe")
+Fire("TRADE_SKILL_CLOSE")
+count, reason = ns.CraftState(crafterEntry, aaronBook.list[1], 10)
+check(count == nil and AltGlancePlanner.craft.label:GetText() == "Open Tailoring", "with the window closed, the button offers to open it")
+AltGlancePlanner.craft.__scripts.OnClick(AltGlancePlanner.craft)
+check(#crafted == 1 and opened[1] == 197, "and pressing it opens the profession window, crafting nothing")
+IN_COMBAT = true
+Fire("TRADE_SKILL_SHOW"); RunTimers()
+count, reason = ns.CraftState(crafterEntry, aaronBook.list[1], 10)
+check(count == nil and reason:find("combat", 1, true), "nothing is crafted in combat")
+IN_COMBAT = false

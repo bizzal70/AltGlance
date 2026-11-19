@@ -1,5 +1,9 @@
 # AltGlance
 
+## 0.8.1
+
+- **Craft** in the profession planner: makes the chosen recipe, the number set under Make (as many as the materials in your bags allow). It works on the character who knows the recipe; if their profession window is closed, the button opens it, then press Craft. Open each profession window once after updating so AltGlance learns how to craft each recipe.
+
 ## 0.8.0
 
 - **Profession planner** (`/alts prof`, or the new **Professions** button in the list). Open a profession window once on each character and AltGlance records their recipes. Then, for any of your characters' professions:

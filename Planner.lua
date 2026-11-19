@@ -75,7 +75,7 @@ local function ReadModern(api)
         if type(info) == "table" and info.learned and not info.isDummyRecipe and not info.isRecraft
                 and not info.isSalvageRecipe then
             local schematic = Call(api.GetRecipeSchematic, recipeID, false)
-            local recipe = { name = Text(info.name) or (type(schematic) == "table" and Text(schematic.name)) or nil, reagents = {} }
+            local recipe = { id = recipeID, name = Text(info.name) or (type(schematic) == "table" and Text(schematic.name)) or nil, reagents = {} }
             if type(schematic) == "table" then
                 recipe.out = Number(schematic.outputItemID)
                 for _, slot in ipairs(schematic.reagentSlotSchematics or {}) do
@@ -91,7 +91,7 @@ local function ReadModern(api)
             if recipe.name and #recipe.reagents > 0 then list[#list + 1] = recipe end
         end
     end
-    return profession, list
+    return profession, list, type(base) == "table" and Number(base.professionID) or nil
 end
 
 -- The original game's way, in case this client has it instead.
@@ -104,7 +104,7 @@ local function ReadClassic()
     for index = 1, count do
         local name, kind = Call(GetTradeSkillInfo, index)
         if Text(name) and kind ~= "header" and kind ~= "subheader" then
-            local recipe = { name = name, reagents = {} }
+            local recipe = { name = name, index = index, reagents = {} }
             local link = Text(Call(GetTradeSkillItemLink, index))
             recipe.out = link and tonumber(link:match("item:(%d+)")) or nil
             for reagentIndex = 1, (Number(Call(GetTradeSkillNumReagents, index)) or 0) do
@@ -129,15 +129,16 @@ function ns.ReadRecipes()
     local api = C_TradeSkillUI
     -- Not someone else's profession (a linked one, a guild's or an NPC's).
     if api and (Call(api.IsTradeSkillLinked) or Call(api.IsTradeSkillGuild) or Call(api.IsNPCCrafting)) then return end
-    local profession, list
-    if api and api.GetAllRecipeIDs then profession, list = ReadModern(api) end
+    local profession, list, skillLine
+    if api and api.GetAllRecipeIDs then profession, list, skillLine = ReadModern(api) end
     if not profession then profession, list = ReadClassic() end
     local key = ns.CurrentKey()
     if not key or not profession or not list or #list == 0 then return end
     table.sort(list, function(a, b) return a.name < b.name end)
     ns.db.recipes[key] = ns.db.recipes[key] or {}
     local known = ns.db.recipes[key][profession]
-    ns.db.recipes[key][profession] = { seen = time(), list = list }
+    ns.db.recipes[key][profession] = { seen = time(), list = list, skillLine = skillLine }
+    ns.openProfession = profession
     if not known then
         ns.Print(("Recorded %d %s recipes. See what you can make, and who holds the materials: /alts prof"):format(#list, profession))
     end
@@ -194,6 +195,68 @@ function ns.Makeable(crafterKey, recipe)
         all = all and math.min(all, b) or b
     end
     return own or 0, all or 0
+end
+
+-- Whether the chosen recipe can be crafted right now, and how many of the
+-- wanted number: the count, or nil and why not ("open" when pressing the
+-- button can open the profession window).
+function ns.CraftState(crafter, recipe, wanted)
+    if crafter.key ~= ns.CurrentKey() then
+        return nil, ("Log in to %s to craft this."):format(ns.DisplayName(crafter.record)), "login"
+    end
+    if InCombatLockdown and InCombatLockdown() then
+        return nil, "Not while in combat."
+    end
+    local api = C_TradeSkillUI
+    if ns.openProfession ~= crafter.profession then
+        local book = ns.db.recipes[crafter.key] and ns.db.recipes[crafter.key][crafter.profession]
+        if book and book.skillLine and api and api.OpenTradeSkill then
+            return nil, ("Your %s window needs to be open to craft: press to open it."):format(crafter.profession), "open"
+        end
+        return nil, ("Open your %s window to craft."):format(crafter.profession)
+    end
+    if recipe.id and api and api.CraftRecipe then
+        local info = Call(api.GetRecipeInfo, recipe.id)
+        local available = type(info) == "table" and Number(info.numAvailable) or nil
+        if available == 0 then return nil, "Not enough materials in your bags for one." end
+        return math.min(wanted, available or wanted)
+    end
+    if recipe.index and DoTradeSkill then
+        local name, _, available = Call(GetTradeSkillInfo, recipe.index)
+        if name ~= recipe.name then
+            return nil, ("Close and open your %s window again, so AltGlance finds this recipe."):format(crafter.profession)
+        end
+        if Number(available) == 0 then return nil, "Not enough materials in your bags for one." end
+        return math.min(wanted, Number(available) or wanted)
+    end
+    return nil, ("Open your %s window once more, so AltGlance learns how to craft this."):format(crafter.profession)
+end
+
+-- Crafts the recipe, as many as wanted and the bags allow, or opens the
+-- profession window first.
+function ns.Craft(crafter, recipe, wanted)
+    local count, reason, action = ns.CraftState(crafter, recipe, wanted)
+    local api = C_TradeSkillUI
+    if count then
+        local ok, problem
+        if recipe.id and api and api.CraftRecipe then
+            ok, problem = pcall(api.CraftRecipe, recipe.id, count)
+        else
+            ok, problem = pcall(DoTradeSkill, recipe.index, count)
+        end
+        if ok then
+            ns.Print(("Crafting %d %s. Moving stops it."):format(count, recipe.name))
+        else
+            ns.Print("The game would not craft it: " .. tostring(problem))
+        end
+        return ok
+    elseif action == "open" then
+        local book = ns.db.recipes[crafter.key][crafter.profession]
+        pcall(api.OpenTradeSkill, book.skillLine)
+        ns.Print(("Opening your %s window: press Craft again once it is open."):format(crafter.profession))
+    else
+        ns.Print(reason)
+    end
 end
 
 local function FindRecipe(key, profession, name)
@@ -288,7 +351,7 @@ local HEADER = 38
 local LIST_TOP, LIST_WIDTH, ROW_HEIGHT, ROWS = 92, 300, 22, 15
 local DETAIL_LEFT = PAD + LIST_WIDTH + 16
 local DETAIL_WIDTH = WIDTH - DETAIL_LEFT - PAD
-local REAGENT_ROWS, REAGENT_HEIGHT = 8, 32
+local REAGENT_ROWS, REAGENT_HEIGHT = 8, 28
 local FILTERS = {
     { key = "all", label = "All recipes" },
     { key = "now", label = "Can make now" },
@@ -467,6 +530,20 @@ local function RefreshDetail(crafter, entry)
         detail.short:SetText("Everything for this is on your characters.")
         detail.short:SetTextColor(0.5, 0.9, 0.5)
     end
+
+    local count, reason, action = ns.CraftState(crafter, recipe, quantity)
+    local craft = window.craft
+    craft.reason = reason
+    if count then
+        craft.label:SetText("Craft " .. count)
+    elseif action == "open" then
+        craft.label:SetText("Open " .. crafter.profession)
+    else
+        craft.label:SetText("Craft")
+    end
+    local ready = count ~= nil or action == "open"
+    craft.label:SetTextColor(ready and 1 or 0.5, ready and 0.95 or 0.5, ready and 0.85 or 0.5)
+    craft.bg:SetColorTexture(ready and 0.45 or 0.14, ready and 0.30 or 0.11, ready and 0.12 or 0.08, 1)
 end
 
 local function Refresh()
@@ -682,7 +759,24 @@ local function CreateWindow()
         end
     end)
     most:SetPoint("TOPLEFT", 156, -48)
-    local add = Button(detail, 120, 26, "Add to plan", function()
+    -- Craft: makes it, if this is the crafter and their profession window
+    -- is open (the game crafts only from there).
+    local craft = Button(detail, 112, 26, "Craft", function()
+        local crafter = Current()
+        local recipe = crafter and FindRecipe(crafter.key, crafter.profession, selected)
+        if recipe then ns.Craft(crafter, recipe, quantity) end
+        Refresh()
+    end)
+    craft:SetPoint("TOPRIGHT", -108, -48)
+    craft:SetScript("OnEnter", function(self)
+        GameTooltip:SetOwner(self, "ANCHOR_TOP")
+        GameTooltip:AddLine("Craft", 1, 1, 1)
+        GameTooltip:AddLine(self.reason or "Makes the number above, as many as the materials in your bags allow.", 0.8, 0.8, 0.8, true)
+        GameTooltip:Show()
+    end)
+    craft:SetScript("OnLeave", function() GameTooltip:Hide() end)
+    window.craft = craft
+    local add = Button(detail, 100, 26, "Add to plan", function()
         local crafter = Current()
         local recipe = crafter and FindRecipe(crafter.key, crafter.profession, selected)
         if not recipe then return end
@@ -787,14 +881,18 @@ frame:SetScript("OnEvent", function(self, event)
         Settings()
         -- Registering an event this client does not have throws.
         for _, name in ipairs({ "TRADE_SKILL_SHOW", "TRADE_SKILL_LIST_UPDATE", "TRADE_SKILL_DATA_SOURCE_CHANGED",
-                "TRADE_SKILL_UPDATE", "NEW_RECIPE_LEARNED", "MAIL_SHOW", "BAG_UPDATE_DELAYED" }) do
+                "TRADE_SKILL_UPDATE", "NEW_RECIPE_LEARNED", "MAIL_SHOW", "BAG_UPDATE_DELAYED", "TRADE_SKILL_CLOSE",
+                "PLAYER_REGEN_DISABLED", "PLAYER_REGEN_ENABLED" }) do
             pcall(self.RegisterEvent, self, name)
         end
         return
     end
     if event == "MAIL_SHOW" then
         pcall(OfferPlan)
-    elseif event == "BAG_UPDATE_DELAYED" then
+    elseif event == "TRADE_SKILL_CLOSE" then
+        ns.openProfession = nil
+        if window and window:IsShown() then pcall(Refresh) end
+    elseif event == "BAG_UPDATE_DELAYED" or event == "PLAYER_REGEN_DISABLED" or event == "PLAYER_REGEN_ENABLED" then
         if window and window:IsShown() then pcall(Refresh) end
     else
         ReadSoon()
