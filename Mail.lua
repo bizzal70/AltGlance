@@ -253,15 +253,64 @@ local function CarriedBags()
     return bags
 end
 
+-- "4/6 Linen Cloth" (Retail) or "Linen Cloth: 4/6" (the original game):
+-- the item's name and how many the quest wants.
+local function ObjectiveItem(text, required)
+    if type(text) ~= "string" then return end
+    local name, _, need = text:match("^(.-):%s*(%d+)%s*/%s*(%d+)%s*$")
+    if not name then _, need, name = text:match("^%s*(%d+)%s*/%s*(%d+)%s+(.-)%s*$") end
+    if not name or name == "" then return end
+    return name, tonumber(required) or tonumber(need)
+end
+
+-- What the quests in your log ask you to collect: item name -> how many.
+-- Read from each quest's objectives, so cloth, ore, herbs and the like a
+-- quest wants stay in your bags until it is handed in.
+function ns.QuestNeeds()
+    local needs = {}
+    local function Add(text, kind, required)
+        if kind ~= "item" then return end
+        local name, count = ObjectiveItem(text, required)
+        if name and count and count > 0 then needs[name] = (needs[name] or 0) + count end
+    end
+    local log = C_QuestLog
+    if log and log.GetNumQuestLogEntries and log.GetInfo and log.GetQuestObjectives then
+        local ok, entries = pcall(log.GetNumQuestLogEntries)
+        for index = 1, (ok and tonumber(entries)) or 0 do
+            local okInfo, info = pcall(log.GetInfo, index)
+            if okInfo and type(info) == "table" and not info.isHeader and info.questID then
+                local okObjectives, objectives = pcall(log.GetQuestObjectives, info.questID)
+                for _, objective in ipairs(okObjectives and type(objectives) == "table" and objectives or {}) do
+                    Add(objective.text, objective.type, objective.numRequired)
+                end
+            end
+        end
+    elseif GetNumQuestLogEntries and GetNumQuestLeaderBoards and GetQuestLogLeaderBoard then
+        local ok, entries = pcall(GetNumQuestLogEntries)
+        for index = 1, (ok and tonumber(entries)) or 0 do
+            local okCount, count = pcall(GetNumQuestLeaderBoards, index)
+            for objective = 1, (okCount and tonumber(count)) or 0 do
+                local okText, text, kind = pcall(GetQuestLogLeaderBoard, objective, index)
+                if okText then Add(text, kind) end
+            end
+        end
+    end
+    return needs
+end
+
 -- The stacks in your bags of the kinds turned on: { bag, slot, itemID, count }.
+-- Stacks a quest in your log still needs are kept back, enough of them to
+-- cover what it asks for; the second result says what was kept, by name.
 function ns.MaterialsToSend()
     Settings()
     local wanted = {}
     for _, kind in ipairs(ns.MAIL_KINDS) do
         if ns.db.mailKinds[kind.key] then wanted[#wanted + 1] = kind.match end
     end
-    local list = {}
-    if not (C_Item and C_Item.GetItemInfoInstant) then return list end
+    local list, kept = {}, {}
+    if not (C_Item and C_Item.GetItemInfoInstant) then return list, kept end
+    local okNeeds, needs = pcall(ns.QuestNeeds)
+    if not okNeeds or type(needs) ~= "table" then needs = {} end
     for _, bag in ipairs(CarriedBags()) do
         local okSlots, slots = pcall(C_Container.GetContainerNumSlots, bag)
         for slot = 1, (okSlots and Usable(slots)) and slots or 0 do
@@ -274,7 +323,12 @@ function ns.MaterialsToSend()
                 if ok then
                     for _, match in ipairs(wanted) do
                         if match(classID, subclassID, info.quality, id, name) then
-                            list[#list + 1] = { bag = bag, slot = slot, id = id, count = info.stackCount or 1 }
+                            local count = info.stackCount or 1
+                            if name and needs[name] and (kept[name] or 0) < needs[name] then
+                                kept[name] = (kept[name] or 0) + count
+                            else
+                                list[#list + 1] = { bag = bag, slot = slot, id = id, count = count }
+                            end
                             break
                         end
                     end
@@ -282,7 +336,7 @@ function ns.MaterialsToSend()
             end
         end
     end
-    return list
+    return list, kept
 end
 
 ---------------------------------------------------------------------------
@@ -510,8 +564,13 @@ function ns.RefreshMailPanel()
         toggle.state:SetTextColor(on and 0.4 or 0.5, on and 0.9 or 0.5, on and 0.4 or 0.5)
     end
 
-    local stacks = #ns.MaterialsToSend()
+    local materials, kept = ns.MaterialsToSend()
+    local stacks = #materials
     local own = AttachedCount()
+    local names = {}
+    for name, count in pairs(kept) do names[#names + 1] = ("%s %d"):format(name, count) end
+    table.sort(names)
+    panel.questNote:SetText(#names > 0 and ("Kept for quests: " .. table.concat(names, ", ")) or "")
     local mails = math.ceil(stacks / PER_MAIL)
     if sending then
         panel.summary:SetText("Sending...")
@@ -638,7 +697,13 @@ local function CreatePanel()
     panel.summary = Label(panel, "GameFontHighlightSmall", "CENTER")
     panel.summary:SetPoint("TOPLEFT", PAD, y)
     panel.summary:SetPoint("TOPRIGHT", -PAD, y)
-    y = y - 22
+    y = y - 16
+    -- Materials a quest in your log asks for stay in your bags; this says which.
+    panel.questNote = Label(panel, "GameFontDisableSmall", "CENTER")
+    panel.questNote:SetPoint("TOPLEFT", PAD, y)
+    panel.questNote:SetPoint("TOPRIGHT", -PAD, y)
+    panel.questNote:SetWordWrap(true)
+    y = y - 26
     panel.send = Button(panel, INNER, 34, "Send", function()
         if not sending then ns.SendNextMail() end
         ns.RefreshMailPanel()

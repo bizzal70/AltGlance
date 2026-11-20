@@ -1,5 +1,9 @@
 # AltGlance
 
+## 0.9.0
+
+- **Send materials keeps what your quests need.** Cloth, ore, herbs and other materials a quest in your log asks you to collect ("Linen Cloth: 4/6") now stay in your bags instead of being mailed to your bank alt. Enough stacks are kept to cover what the quest wants, and the rest still go. The panel says what it kept ("Kept for quests: Linen Cloth 10"). Once the quest is handed in, they are sent as usual.
+
 ## 0.8.2
 
 - Profession planner tidied up: **Craft** and **Add to plan** are now two large buttons along the bottom (Craft no longer overlaps Most), with the reason Craft can't be pressed shown just above it. Each material's line reads "Shannbizz has 2 - Alts: Bizzall 8, Shannizz 8 +7 on the other faction": the characters who can mail it come first, the other faction is summed up. The window is a little taller, showing more recipes and materials.

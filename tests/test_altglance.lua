@@ -279,6 +279,42 @@ check(panel and panel:IsShown(), "opening the mailbox shows the Send materials p
 local list = ns.MailRecipients()
 check(#list == 1 and list[1].record.fullName == "Mirabel Brightwater", "only characters this one can mail are offered: same realm and faction")
 check(#ns.MaterialsToSend() == 14, "ore, herbs, leather and cloth are picked up; food and soulbound items are not")
+-- Materials a quest asks for stay in the bags.
+C_QuestLog = {
+    GetNumQuestLogEntries = function() return 2, 1 end,
+    GetInfo = function(index)
+        if index == 1 then return { isHeader = true, title = "Elwynn Forest" } end
+        return { questID = 77, title = "Linen for the Tailor" }
+    end,
+    GetQuestObjectives = function()
+        return { { text = "4/6 Linen Cloth", type = "item", numRequired = 6 }, { text = "2/8 Wolves slain", type = "monster", numRequired = 8 } }
+    end,
+}
+local materials, kept = ns.MaterialsToSend()
+local hasLinen = false
+for _, m in ipairs(materials) do if m.id == 2589 then hasLinen = true end end
+check(#materials == 13 and not hasLinen and kept["Linen Cloth"] == 10, "cloth a quest in the log asks for is kept, not mailed")
+ns.RefreshMailPanel()
+check(panel.questNote.__text == "Kept for quests: Linen Cloth 10", "and the panel says what was kept: " .. tostring(panel.questNote.__text))
+-- Two stacks of tin, five each, and a quest wanting 8: both stay; wanting 5, one stays and the rest go.
+C_QuestLog = nil
+local tinWanted = 8
+GetNumQuestLogEntries = function() return 1 end
+GetNumQuestLeaderBoards = function() return 2 end
+GetQuestLogLeaderBoard = function(objective)
+    if objective == 1 then return "Tin Ore: 0/" .. tinWanted, "item", false end
+    return "Defias Thug slain: 3/10", "monster", false
+end
+materials, kept = ns.MaterialsToSend()
+check(#materials == 12 and kept["Tin Ore"] == 10, "with the original game's quest log, enough stacks are kept to cover the quest")
+tinWanted = 5
+materials, kept = ns.MaterialsToSend()
+check(#materials == 13 and kept["Tin Ore"] == 5, "and only as many stacks as it takes")
+GetQuestLogLeaderBoard = function() error("something this client does differently") end
+check(#ns.MaterialsToSend() == 14, "a surprise from the quest log keeps nothing back, without an error")
+GetNumQuestLogEntries, GetNumQuestLeaderBoards, GetQuestLogLeaderBoard = nil, nil, nil
+ns.RefreshMailPanel()
+check(panel.questNote.__text == "", "with no quests wanting anything, the note is empty")
 panel.toggles.cloth.__scripts.OnClick(panel.toggles.cloth)
 check(#ns.MaterialsToSend() == 13 and not ns.db.mailKinds.cloth, "a kind can be turned off")
 check(nameBox.text == "", "with no bank alt, the To box is left empty")
