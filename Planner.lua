@@ -807,6 +807,8 @@ local function Refresh()
         chosen = recipes[1]
         selected, quantity = chosen.recipe.name, 1
     end
+    -- Remembered between sessions: the planner opens where you left it.
+    ns.db.plannerView = { key = crafter.key, profession = crafter.profession, recipe = selected, offset = offset }
     for index = 1, ROWS do
         local row = rows[index]
         local entry = recipes[index + offset]
@@ -1177,9 +1179,19 @@ function ns.TogglePlanner()
     else
         -- Always open on all recipes; the filter is for while it is open.
         ns.db.plannerFilter = "all"
-        -- Start on the character being played, if they have recipes.
+        -- Open on the character, profession and recipe you were last looking
+        -- at (remembered between sessions); the first time, on the character
+        -- being played, if they have recipes.
         crafters = Crafters()
-        if crafters[pick] == nil or (crafters[1] and crafters[1].key == ns.CurrentKey() and crafters[pick].key ~= ns.CurrentKey()) then
+        local view, found = ns.db.plannerView, nil
+        if type(view) == "table" then
+            for index, entry in ipairs(crafters) do
+                if entry.key == view.key and entry.profession == view.profession then found = index end
+            end
+        end
+        if found then
+            pick, offset, selected = found, tonumber(view.offset) or 0, view.recipe
+        elseif crafters[pick] == nil or (crafters[1] and crafters[1].key == ns.CurrentKey() and crafters[pick].key ~= ns.CurrentKey()) then
             pick, offset, selected = 1, 0, nil
         end
         window:Show()

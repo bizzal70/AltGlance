@@ -1,5 +1,9 @@
 # AltGlance
 
+## 0.11.3
+
+- **The profession planner remembers where you were:** it reopens on the character, profession and recipe you were last looking at, scrolled where you left it, even after logging out or switching characters. The button with your character's name still takes you to your own professions. (It still opens on All recipes.)
+
 ## 0.11.2
 
 - The profession planner always opens on **All recipes**. The filter button still narrows the list while it is open.

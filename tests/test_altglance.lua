@@ -645,6 +645,12 @@ check(ns.db.plannerFilter == "all", "and back round to all")
 AltGlancePlanner.filter.__scripts.OnClick(AltGlancePlanner.filter)
 ns.TogglePlanner(); ns.TogglePlanner()
 check(ns.db.plannerFilter == "all", "the planner always opens on all recipes")
+-- It opens where you left it, even after logging out (the view is saved).
+AltGlancePlanner.next.__scripts.OnClick(AltGlancePlanner.next)
+local leftOn = AltGlancePlanner.crafter:GetText()
+local savedView = ns.db.plannerView
+ns.TogglePlanner(); ns.TogglePlanner()
+check(AltGlancePlanner.crafter:GetText() == leftOn and savedView.profession ~= nil, "the planner reopens on the profession you were looking at: " .. tostring(leftOn))
 AltGlanceWindow.plannerButton.__scripts.OnClick(AltGlanceWindow.plannerButton)
 check(not AltGlancePlanner:IsShown(), "the Professions button in the list toggles the planner")
 AltGlanceWindow.plannerButton.__scripts.OnClick(AltGlanceWindow.plannerButton)
