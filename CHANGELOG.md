@@ -1,5 +1,9 @@
 # AltGlance
 
+## 0.10.0
+
+- **Record my professions:** a button at the top of the profession planner, shown while the character you are playing has a profession with recipes that is not recorded yet. Press it and AltGlance opens each of those profession windows in turn, records the recipes and closes it again: no need to open them yourself. Gathering professions without recipes (Herbalism, Skinning, Fishing) are skipped, and one found to have nothing to record is not offered again. If the game will not open a window for an addon, AltGlance says so, and opening it once yourself still works.
+
 ## 0.9.2
 
 - **Fix, take two:** whether two characters are on the same realm now goes by the realm's server number, which every character carries, not by the realm's name. On the affected character the game gave a different name, or none, so 0.9.1 was not enough. The bank alt is found the same way. 0.9.1 also saved the character's last name as its realm on that character (Forever gives the last name where the game normally gives the realm); that is no longer read, and is cleared.

@@ -704,3 +704,40 @@ Fire("TRADE_SKILL_SHOW"); RunTimers()
 count, reason = ns.CraftState(crafterEntry, aaronBook.list[1], 10)
 check(count == nil and reason:find("combat", 1, true), "nothing is crafted in combat")
 IN_COMBAT = false
+Fire("TRADE_SKILL_CLOSE")
+
+-- Record my professions: AltGlance opens each window not recorded yet.
+do
+    local me = ns.CurrentKey()
+    local openedLines, closed, open = {}, 0, nil
+    local LINES = { [129] = "First Aid", [186] = "Mining", [393] = "Skinning" }
+    local profs = { { "Mining", 186 }, { "Skinning", 393 }, { "First Aid", 129 } }
+    GetProfessions = function() return 1, 2, nil, nil, 3 end
+    GetProfessionInfo = function(index) local p = profs[index]; return p[1], "icon", 50, 75, 0, 0, p[2] end
+    C_TradeSkillUI.OpenTradeSkill = function(line) openedLines[#openedLines + 1] = line; open = LINES[line]; Fire("TRADE_SKILL_SHOW") end
+    C_TradeSkillUI.CloseTradeSkill = function() closed = closed + 1; open = nil; Fire("TRADE_SKILL_CLOSE") end
+    C_TradeSkillUI.GetBaseProfessionInfo = function() return open and { professionName = open, professionID = 129 } or nil end
+    C_TradeSkillUI.GetAllRecipeIDs = function() if open == "First Aid" then return { 101 } end return {} end
+    local missing = ns.UnrecordedProfessions()
+    check(#missing == 2 and missing[1].name == "Mining" and missing[2].name == "First Aid",
+        "Record offers the professions with recipes not recorded yet (not Skinning)")
+    if not AltGlancePlanner:IsShown() then ns.TogglePlanner() end
+    ns.RefreshPlanner()
+    local record = AltGlancePlanner.record
+    check(record:IsShown() and record.label:GetText() == "Record my 2 professions", "the planner shows the Record button: " .. tostring(record.label:GetText()))
+    record.__scripts.OnClick(record)
+    check(record.label:GetText() == "Recording...", "and says so while it works")
+    for _ = 1, 40 do RunTimers() end
+    check(openedLines[1] == 186 and openedLines[2] == 129 and closed == 2, "each window is opened and closed in turn")
+    check(ns.db.recipes[me]["First Aid"] and #ns.db.recipes[me]["First Aid"].list == 1, "First Aid's recipes are recorded")
+    check(ns.db.recordTried[me].Mining, "Mining, with nothing to record, is not offered again")
+    check(not record:IsShown(), "and the button goes once everything is recorded")
+    -- The game not opening the window for an addon.
+    ns.db.recipes[me]["First Aid"] = nil
+    C_TradeSkillUI.OpenTradeSkill = function() end
+    ns.RefreshPlanner()
+    record.__scripts.OnClick(record)
+    for _ = 1, 40 do RunTimers() end
+    check(printed[#printed]:find("did not open your First Aid window", 1, true) ~= nil, "if the game does not open it, it says so: " .. tostring(printed[#printed]))
+    check(record:IsShown() and record.label:GetText() == "Record my First Aid", "and the button stays for another try")
+end

@@ -147,6 +147,114 @@ function ns.ReadRecipes()
 end
 
 ---------------------------------------------------------------------------
+-- Record my professions: the game gives recipes only while a profession
+-- window is open, so AltGlance opens each one not recorded yet, reads it,
+-- and closes it again, one after another.
+---------------------------------------------------------------------------
+
+-- Skill lines with no recipes: Herbalism, Skinning, Fishing, Archaeology.
+local NO_RECIPES = { [182] = true, [393] = true, [356] = true, [794] = true }
+-- Half-second looks at a window before giving up on it.
+local RECORD_TRIES = 10
+
+-- The playing character's professions with recipes that are not recorded
+-- yet: { { name =, skillLine = } }. A profession opened once and found to
+-- have nothing to record is left out.
+function ns.UnrecordedProfessions()
+    Settings()
+    local list = {}
+    local api = C_TradeSkillUI
+    local key = ns.CurrentKey()
+    if not key or not (api and api.OpenTradeSkill) or not GetProfessions or not GetProfessionInfo then return list end
+    local book = ns.db.recipes[key] or {}
+    local tried = ns.db.recordTried and ns.db.recordTried[key] or {}
+    local indices = { Call(GetProfessions) }
+    for slot = 1, 5 do
+        local index = Number(indices[slot])
+        if index then
+            local name, _, _, _, _, _, skillLine = Call(GetProfessionInfo, index)
+            name, skillLine = Text(name), Number(skillLine)
+            if name and skillLine and not NO_RECIPES[skillLine] and not book[name] and not tried[name] then
+                list[#list + 1] = { name = name, skillLine = skillLine }
+            end
+        end
+    end
+    return list
+end
+
+local recording   -- while recording: { queue =, current =, tries =, shown = }
+
+local function FinishRecording(message)
+    recording = nil
+    if message then ns.Print(message) end
+    ns.plannerShowMe = true
+    if ns.RefreshPlanner then pcall(ns.RefreshPlanner) end
+end
+
+local RecordNext
+
+-- Looks at the window just opened until its recipes can be read.
+local function Look()
+    local job = recording
+    if not job then return end
+    job.tries = job.tries + 1
+    local profession
+    if job.shown then
+        local ok, read = pcall(ns.ReadRecipes)
+        profession = ok and read or nil
+    end
+    if not profession and job.tries < RECORD_TRIES then
+        C_Timer.After(0.5, Look)
+        return
+    end
+    if not profession then
+        if not job.shown then
+            return FinishRecording(("The game did not open your %s window for AltGlance. Open it once yourself, and it is recorded."):format(job.current.name))
+        end
+        local key = ns.CurrentKey() or "?"
+        ns.db.recordTried = ns.db.recordTried or {}
+        ns.db.recordTried[key] = ns.db.recordTried[key] or {}
+        ns.db.recordTried[key][job.current.name] = true
+        ns.Print(("%s has no recipes to record."):format(job.current.name))
+    end
+    Call(C_TradeSkillUI.CloseTradeSkill)
+    C_Timer.After(0.3, RecordNext)
+end
+
+-- Opens the next profession window waiting to be recorded.
+function RecordNext()
+    local job = recording
+    if not job then return end
+    local item = table.remove(job.queue, 1)
+    if not item then return FinishRecording() end
+    if InCombatLockdown and InCombatLockdown() then
+        return FinishRecording("Recording stopped: not while in combat. Press Record again afterwards.")
+    end
+    job.current, job.tries, job.shown = item, 0, false
+    if not pcall(C_TradeSkillUI.OpenTradeSkill, item.skillLine) then
+        return FinishRecording(("The game would not open your %s window. Open it once yourself, and it is recorded."):format(item.name))
+    end
+    C_Timer.After(0.5, Look)
+end
+
+-- The Record button: records every profession not recorded yet.
+function ns.RecordProfessions()
+    if recording then return end
+    local queue = ns.UnrecordedProfessions()
+    if #queue == 0 then
+        ns.Print("All your professions with recipes are recorded.")
+        return
+    end
+    recording = { queue = queue }
+    RecordNext()
+    if ns.RefreshPlanner then pcall(ns.RefreshPlanner) end
+end
+
+function ns.IsRecording()
+    return recording ~= nil
+end
+
+---------------------------------------------------------------------------
 -- Who holds what, and how many can be made
 ---------------------------------------------------------------------------
 
@@ -567,9 +675,25 @@ local function Refresh()
     if not window or not window:IsShown() then return end
     Settings()
     crafters = Crafters()
+    if ns.plannerShowMe then
+        ns.plannerShowMe = nil
+        if crafters[1] and crafters[1].key == ns.CurrentKey() then pick, offset, selected = 1, 0, nil end
+    end
     pick = math.min(math.max(pick, 1), math.max(#crafters, 1))
     local crafter = Current()
     window.empty:SetShown(crafter == nil)
+
+    -- Record: the playing character's professions not recorded yet.
+    local missing = ns.UnrecordedProfessions()
+    window.record:SetShown(#missing > 0 or ns.IsRecording())
+    if ns.IsRecording() then
+        window.record.label:SetText("Recording...")
+    elseif #missing == 1 then
+        window.record.label:SetText("Record my " .. missing[1].name)
+    else
+        window.record.label:SetText(("Record my %d professions"):format(#missing))
+    end
+    window.record.missing = missing
     window.prev:SetShown(#crafters > 1)
     window.next:SetShown(#crafters > 1)
     for _, filter in ipairs(FILTERS) do
@@ -709,6 +833,23 @@ local function CreateWindow()
     title:SetTextColor(1, 0.9, 0.75)
     local close = Button(header, 30, 30, "x", function() window:Hide() end)
     close:SetPoint("RIGHT", -4, 0)
+    -- Record: opens each profession window not recorded yet, reads it, closes it.
+    window.record = Button(header, 230, 28, "", function()
+        ns.RecordProfessions()
+        Refresh()
+    end)
+    window.record:SetPoint("RIGHT", close, "LEFT", -8, 0)
+    window.record.label:SetTextColor(1, 0.85, 0.45)
+    window.record:SetScript("OnEnter", function(self)
+        GameTooltip:SetOwner(self, "ANCHOR_BOTTOM")
+        GameTooltip:AddLine("Record my professions", 1, 1, 1)
+        local names = {}
+        for _, item in ipairs(self.missing or {}) do names[#names + 1] = item.name end
+        if #names > 0 then GameTooltip:AddLine("Not recorded yet: " .. table.concat(names, ", "), 1, 0.85, 0.45, true) end
+        GameTooltip:AddLine("The game shows recipes only in the profession window, so AltGlance opens each one, reads it and closes it again.", 0.8, 0.8, 0.8, true)
+        GameTooltip:Show()
+    end)
+    window.record:SetScript("OnLeave", function() GameTooltip:Hide() end)
 
     -- Crafter and profession:  [<]  Name Surname - Tailoring (42)  [>]
     local y = -(HEADER + 10)
@@ -744,7 +885,7 @@ local function CreateWindow()
     window.empty:SetPoint("CENTER", 0, 20)
     window.empty:SetWidth(WIDTH - 80)
     window.empty:SetWordWrap(true)
-    window.empty:SetText("No recipes recorded yet.\n\nOpen a profession window (Tailoring, Enchanting...) on each of your characters,\nand AltGlance records what they can make.")
+    window.empty:SetText("No recipes recorded yet.\n\nPress Record at the top on each of your characters (or open their profession windows),\nand AltGlance records what they can make.")
 
     -- The chosen recipe.
     local detail = CreateFrame("Frame", nil, window)
@@ -919,6 +1060,7 @@ frame:SetScript("OnEvent", function(self, event)
     elseif event == "BAG_UPDATE_DELAYED" or event == "PLAYER_REGEN_DISABLED" or event == "PLAYER_REGEN_ENABLED" then
         if window and window:IsShown() then pcall(Refresh) end
     else
+        if recording then recording.shown = true end
         ReadSoon()
     end
 end)
