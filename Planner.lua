@@ -765,6 +765,21 @@ local function Refresh()
     record.label:SetTextColor(active and 1 or 0.5, active and 0.85 or 0.5, active and 0.45 or 0.5)
     window.prev:SetShown(#crafters > 1)
     window.next:SetShown(#crafters > 1)
+    -- The button back to the character being played: only when they have
+    -- recipes and there are others to browse; dimmed while already there.
+    local me = ns.CurrentKey()
+    local mine = me and ns.db.chars[me]
+    local hasMine = false
+    for _, entry in ipairs(crafters) do
+        if entry.key == me then hasMine = true break end
+    end
+    window.home:SetShown(hasMine and #crafters > 1)
+    if mine then
+        window.home.label:SetText(mine.name or ns.DisplayName(mine))
+        window.home.who = ns.DisplayName(mine)
+        local here = crafter ~= nil and crafter.key == me
+        window.home.label:SetTextColor(here and 0.5 or 1, here and 0.5 or 0.85, here and 0.5 or 0.45)
+    end
     for _, filter in ipairs(FILTERS) do
         if filter.key == ns.db.plannerFilter then window.filter.label:SetText(filter.label) end
     end
@@ -949,6 +964,26 @@ local function CreateWindow()
     window.crafter = Label(window, "GameFontHighlight", "CENTER")
     window.crafter:SetPoint("TOPLEFT", PAD + 36, y - 8)
     window.crafter:SetWidth(338)
+    -- Back to the character being played, after browsing the others.
+    window.home = Button(window, 92, 30, "", function()
+        local me = ns.CurrentKey()
+        for index, entry in ipairs(crafters) do
+            if entry.key == me then
+                pick, offset, selected = index, 0, nil
+                break
+            end
+        end
+        Refresh()
+    end)
+    window.home:SetPoint("TOPLEFT", PAD + 416, y)
+    window.home.label:SetFontObject("GameFontHighlightSmall")
+    window.home:SetScript("OnEnter", function(self)
+        GameTooltip:SetOwner(self, "ANCHOR_BOTTOM")
+        GameTooltip:AddLine("Back to the character you are playing", 1, 1, 1)
+        if self.who then GameTooltip:AddLine(self.who .. "'s professions.", 0.8, 0.8, 0.8) end
+        GameTooltip:Show()
+    end)
+    window.home:SetScript("OnLeave", function() GameTooltip:Hide() end)
     -- Which recipes the list shows.
     window.filter = Button(window, 200, 30, "", function()
         local index = 1

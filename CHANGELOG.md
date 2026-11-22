@@ -1,5 +1,9 @@
 # AltGlance
 
+## 0.10.3
+
+- Profession planner: a button beside the **<** and **>** arrows, named after the character you are playing ("Bizzall"), goes straight back to their professions after browsing your other characters. It is dimmed while you are already there.
+
 ## 0.10.2
 
 - The **Record** button is now always there. Once your professions are recorded it reads **Update my Cooking** (or whichever of your professions is shown): press it to read that profession again, so recipes learned since show up. Its tooltip says when it was last read. On another character's profession it is greyed and says who to log in to.

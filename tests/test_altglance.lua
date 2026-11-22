@@ -764,6 +764,16 @@ do
         AltGlancePlanner.next.__scripts.OnClick(AltGlancePlanner.next)
     end
     check(record.label:GetText() == "Update recipes", "on another character's profession it cannot update")
+    local home = AltGlancePlanner.home
+    check(home:IsShown() and home.label:GetText() == "Aaron", "a button named after the character being played is shown: " .. tostring(home.label:GetText()))
+    home.__scripts.OnClick(home)
+    check(AltGlancePlanner.crafter:GetText():find("Aaron Stone", 1, true) ~= nil and record.label:GetText():find("Update my", 1, true) ~= nil,
+        "pressing it goes back to their professions: " .. tostring(AltGlancePlanner.crafter:GetText()))
+    AltGlancePlanner.next.__scripts.OnClick(AltGlancePlanner.next)
+    for _ = 1, 5 do
+        if record.label:GetText() == "Update recipes" then break end
+        AltGlancePlanner.next.__scripts.OnClick(AltGlancePlanner.next)
+    end
     record.__scripts.OnClick(record)
     check(printed[#printed]:find("Log in to Bizz Wolf", 1, true) ~= nil, "and says who to log in to: " .. tostring(printed[#printed]))
     ns.db.recipes["Player-5"] = nil
