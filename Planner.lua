@@ -157,8 +157,7 @@ end
 -- Whether materials can be mailed between the two: same realm and faction,
 -- and the crafter's full name is known (mail only goes to full names).
 local function CanSupply(crafterKey, crafter, key, record)
-    local realm = ns.RealmOf(key, record)
-    return crafter.fullName ~= nil and realm ~= nil and realm == ns.RealmOf(crafterKey, crafter)
+    return crafter.fullName ~= nil and ns.SameRealm(crafterKey, crafter, key, record)
         and record.faction ~= nil and record.faction == crafter.faction
 end
 

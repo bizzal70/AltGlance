@@ -1,5 +1,9 @@
 # AltGlance
 
+## 0.9.2
+
+- **Fix, take two:** whether two characters are on the same realm now goes by the realm's server number, which every character carries, not by the realm's name. On the affected character the game gave a different name, or none, so 0.9.1 was not enough. The bank alt is found the same way. 0.9.1 also saved the character's last name as its realm on that character (Forever gives the last name where the game normally gives the realm); that is no longer read, and is cleared.
+
 ## 0.9.1
 
 - **Fix: Send materials said "No alt to send to yet" on some characters.** Forever's game sometimes gives an empty realm name, so that character looked as if it were on a different realm from all your alts, and the bank alt was not found. AltGlance now never saves an empty realm name, tries the game's other ways of reading it, and otherwise works out the realm from your other characters on the same realm server. The profession planner's "who can mail it" uses the same fix.

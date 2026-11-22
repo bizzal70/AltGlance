@@ -104,7 +104,7 @@ local function CanMail(mine, myKey, key, record)
     return key ~= myKey and type(record.fullName) == "string" and record.fullName ~= ""
         and record.fullName ~= mine.fullName
         and record.faction ~= nil and record.faction == mine.faction
-        and ns.RealmOf(key, record) ~= nil and ns.RealmOf(key, record) == ns.RealmOf(myKey, mine)
+        and ns.SameRealm(myKey, mine, key, record)
 end
 ns.CanMail = CanMail
 

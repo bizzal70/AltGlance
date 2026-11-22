@@ -85,30 +85,41 @@ end
 
 -- A character's realm. Forever's GetRealmName sometimes gives an empty name
 -- (seen 2026-11-22: "" on one character, the full name on the others), so
--- when it is missing it is taken from another character on the same realm
--- server, going by the GUID.
+-- the realm goes by the server number in the GUID: the name most of the
+-- characters on that server were recorded with. Without a server number,
+-- the character's own realm name.
 function ns.RealmOf(key, record)
-    if type(record.realm) == "string" and record.realm ~= "" then return record.realm end
+    local own = type(record.realm) == "string" and record.realm ~= "" and record.realm or nil
     local server = ServerID(key)
-    if not server then return nil end
+    if not server then return own end
+    local votes, best, most = {}, nil, 0
     for otherKey, other in pairs(ns.db.chars) do
-        if ServerID(otherKey) == server and type(other.realm) == "string" and other.realm ~= "" then
-            return other.realm
+        local realm = other.realm
+        if ServerID(otherKey) == server and type(realm) == "string" and realm ~= "" then
+            votes[realm] = (votes[realm] or 0) + 1
+            if votes[realm] > most or (votes[realm] == most and realm < best) then
+                best, most = realm, votes[realm]
+            end
         end
     end
-    return "Realm " .. server
+    return best or own or ("Realm " .. server)
 end
 
--- The realm name, from whichever of the game's functions gives one.
+-- Whether two characters are on the same realm: by the GUID's server number
+-- when both have one, else by realm name.
+function ns.SameRealm(keyA, recordA, keyB, recordB)
+    local a, b = ServerID(keyA), ServerID(keyB)
+    if a and b then return a == b end
+    local realm = ns.RealmOf(keyA, recordA)
+    return realm ~= nil and realm == ns.RealmOf(keyB, recordB)
+end
+
+-- The realm name, or nil when the game gives an empty one. Only
+-- GetRealmName: on Forever, UnitFullName's "realm" is the character's last
+-- name ("Wolfbane", seen 2026-11-22), as with UnitName's second value.
 local function ReadRealm()
-    for _, read in ipairs({
-        function() return GetRealmName() end,
-        function() return GetNormalizedRealmName and GetNormalizedRealmName() end,
-        function() return UnitFullName and select(2, UnitFullName("player")) end,
-    }) do
-        local ok, realm = pcall(read)
-        if ok and Usable(realm) and type(realm) == "string" and realm ~= "" then return realm end
-    end
+    local ok, realm = pcall(GetRealmName)
+    if ok and Usable(realm) and type(realm) == "string" and realm ~= "" then return realm end
 end
 
 -- Sets a field only when the game gave a usable answer, so a value it
@@ -173,6 +184,8 @@ function ns.Snapshot()
     Keep(record, "fullName", full)
     -- An empty realm name is not kept (see ns.RealmOf).
     if record.realm == "" then record.realm = nil end
+    -- 0.9.1 could save the last name as the realm: drop it.
+    if record.realm and type(second) == "string" and record.realm == second then record.realm = nil end
     Keep(record, "realm", ReadRealm())
     local className, classFile = UnitClass("player")
     Keep(record, "class", className)
@@ -322,7 +335,7 @@ SlashCmdList.ALTGLANCE = function(msg)
                 ns.Print(ns.DisplayName(ns.db.chars[key]) .. " is already your bank alt.")
             else
                 local mine, theirs = ns.db.chars[ns.CurrentKey() or ""], ns.db.chars[key]
-                if mine and (ns.RealmOf(ns.CurrentKey(), mine) ~= ns.RealmOf(key, theirs) or mine.faction ~= theirs.faction) then
+                if mine and (not ns.SameRealm(ns.CurrentKey(), mine, key, theirs) or mine.faction ~= theirs.faction) then
                     ns.Print(ns.DisplayName(theirs) .. " is on another realm or faction, so they cannot be mailed from here.")
                 elseif not theirs.fullName then
                     ns.Print(theirs.name .. "'s full name is not known yet: log in to them once, then choose them again.")

@@ -287,6 +287,11 @@ do
     chars["Player-77-0B"] = { name = "Shannbizz", fullName = "Shannbizz Wolfbane", realm = "CAMWOW Realm 10", faction = "Alliance" }
     chars["Player-78-0C"] = { name = "Farbizz", fullName = "Farbizz Wolfbane", realm = "CAMWOW Realm 9", faction = "Alliance" }
     check(ns.RealmOf("Player-77-0A", chars["Player-77-0A"]) == "CAMWOW Realm 10", "an empty realm name is filled in from a character on the same realm server")
+    chars["Player-77-0A"].realm = "CAMWOWRealm10"
+    check(ns.RealmOf("Player-77-0A", chars["Player-77-0A"]) == "CAMWOW Realm 10"
+        and ns.CanMail(chars["Player-77-0A"], "Player-77-0A", "Player-77-0B", chars["Player-77-0B"]),
+        "a realm name spelt differently (no spaces) still counts as the same realm, by the server number")
+    chars["Player-77-0A"].realm = ""
     check(ns.CanMail(chars["Player-77-0A"], "Player-77-0A", "Player-77-0B", chars["Player-77-0B"])
         and not ns.CanMail(chars["Player-77-0A"], "Player-77-0A", "Player-78-0C", chars["Player-78-0C"]),
         "so a character with no realm name can still mail its alts on that realm, and not those elsewhere")
