@@ -59,7 +59,7 @@ Each character is shown with their faction's crest, in their class colour, most 
 
 ## Profession planner
 
-On each character, press **Record my professions** at the top of the planner (or open a profession window yourself once: Tailoring, Enchanting, Alchemy...), and AltGlance records the recipes they know. Each press opens one profession window, reads it and closes it, since the game shows recipes only there. Then type `/alts prof`, or press **Professions** in the list:
+On each character, press **Record my professions** at the top of the planner (or open a profession window yourself once: Tailoring, Enchanting, Alchemy...), and AltGlance records the recipes they know. Once everything is recorded the button reads **Update my ...**: press it to read the profession shown again, for recipes learned since. Each press opens one profession window, reads it and closes it, since the game shows recipes only there. Then type `/alts prof`, or press **Professions** in the list:
 
 - Step through your characters' professions with **<** and **>**. The list shows every recipe they know: **green** when they can make it now with what they hold, **yellow \*** when they can with materials from your other characters, with how many.
 - Choose a recipe to see each material it takes, how many the crafter has, and which of your characters holds the rest. Characters on the other faction are marked, as mail cannot cross factions. Anything still to buy or gather is listed underneath. Hover over a material for its tooltip.

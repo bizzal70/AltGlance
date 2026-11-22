@@ -200,10 +200,10 @@ local function Look()
     local job = recording
     if not job then return end
     job.tries = job.tries + 1
-    local profession
+    local profession, count
     if job.shown then
-        local ok, read = pcall(ns.ReadRecipes)
-        profession = ok and read or nil
+        local ok, read, number = pcall(ns.ReadRecipes)
+        if ok then profession, count = read, number end
     end
     if not profession and job.tries < RECORD_TRIES then
         C_Timer.After(0.5, Look)
@@ -213,11 +213,17 @@ local function Look()
         if not job.shown then
             return FinishRecording(("The game did not open your %s window for AltGlance. Open it once yourself, and it is recorded."):format(job.current.name))
         end
+        if job.current.update then
+            Call(C_TradeSkillUI.CloseTradeSkill)
+            return FinishRecording(("Could not read your %s recipes. Open the window yourself once to update them."):format(job.current.name))
+        end
         local key = ns.CurrentKey() or "?"
         ns.db.recordTried = ns.db.recordTried or {}
         ns.db.recordTried[key] = ns.db.recordTried[key] or {}
         ns.db.recordTried[key][job.current.name] = true
         ns.Print(("%s has no recipes to record."):format(job.current.name))
+    elseif job.current.update then
+        ns.Print(("Updated your %s recipes: %d."):format(profession, count or 0))
     end
     Call(C_TradeSkillUI.CloseTradeSkill)
     FinishRecording()
@@ -255,6 +261,55 @@ end
 function ns.IsRecording()
     return recording ~= nil
 end
+
+-- The skill line that opens one of the playing character's professions.
+local function SkillLine(name)
+    if GetProfessions and GetProfessionInfo then
+        local indices = { Call(GetProfessions) }
+        for slot = 1, 5 do
+            local index = Number(indices[slot])
+            if index then
+                local found, _, _, _, _, _, skillLine = Call(GetProfessionInfo, index)
+                if Text(found) == name and Number(skillLine) then return skillLine end
+            end
+        end
+    end
+    local book = ns.db.recipes[ns.CurrentKey() or ""]
+    return book and book[name] and book[name].skillLine
+end
+
+-- The Update button: reads one of the playing character's professions
+-- again, so recipes learned since show up.
+function ns.UpdateProfession(name)
+    if recording or not name then return end
+    if ns.openProfession == name then
+        -- Already open: just read it.
+        local ok, profession, count = pcall(ns.ReadRecipes)
+        ns.Print(ok and profession and ("Updated your %s recipes: %d."):format(profession, count or 0)
+            or ("Could not read your %s recipes."):format(name))
+        return
+    end
+    local skillLine = SkillLine(name)
+    if not skillLine or not (C_TradeSkillUI and C_TradeSkillUI.OpenTradeSkill) then
+        ns.Print(("Open your %s window yourself to update its recipes."):format(name))
+        return
+    end
+    recording = { queue = { { name = name, skillLine = skillLine, update = true } } }
+    RecordNext()
+    if ns.RefreshPlanner then pcall(ns.RefreshPlanner) end
+end
+
+-- "just now", "5 min ago", "3 h ago", "2 days ago"
+local function Age(seen)
+    if type(seen) ~= "number" then return "unknown" end
+    local seconds = math.max(0, time() - seen)
+    if seconds < 60 then return "just now" end
+    if seconds < 3600 then return ("%d min ago"):format(math.floor(seconds / 60)) end
+    if seconds < 86400 then return ("%d h ago"):format(math.floor(seconds / 3600)) end
+    local days = math.floor(seconds / 86400)
+    return ("%d day%s ago"):format(days, days == 1 and "" or "s")
+end
+ns.RecipeAge = Age
 
 ---------------------------------------------------------------------------
 -- Who holds what, and how many can be made
@@ -685,17 +740,29 @@ local function Refresh()
     local crafter = Current()
     window.empty:SetShown(crafter == nil)
 
-    -- Record: the playing character's professions not recorded yet.
+    -- Record / Update: the playing character's professions not recorded
+    -- yet first; otherwise the profession shown, if it is theirs.
     local missing = ns.UnrecordedProfessions()
-    window.record:SetShown(#missing > 0 or ns.IsRecording())
+    local record = window.record
+    record.missing, record.crafter, record.mode = missing, crafter, "record"
+    local canOpen = C_TradeSkillUI and C_TradeSkillUI.OpenTradeSkill and true or false
+    record:SetShown(canOpen or #missing > 0)
+    local active = true
     if ns.IsRecording() then
-        window.record.label:SetText("Recording...")
+        record.label:SetText("Recording...")
     elseif #missing == 1 then
-        window.record.label:SetText("Record my " .. missing[1].name)
+        record.label:SetText("Record my " .. missing[1].name)
     elseif #missing > 1 then
-        window.record.label:SetText(("Record my %s (%d more)"):format(missing[1].name, #missing - 1))
+        record.label:SetText(("Record my %s (%d more)"):format(missing[1].name, #missing - 1))
+    elseif crafter and crafter.key == ns.CurrentKey() then
+        record.mode = "update"
+        record.label:SetText("Update my " .. crafter.profession)
+    else
+        record.mode = "other"
+        record.label:SetText("Update recipes")
+        active = false
     end
-    window.record.missing = missing
+    record.label:SetTextColor(active and 1 or 0.5, active and 0.85 or 0.5, active and 0.45 or 0.5)
     window.prev:SetShown(#crafters > 1)
     window.next:SetShown(#crafters > 1)
     for _, filter in ipairs(FILTERS) do
@@ -836,15 +903,35 @@ local function CreateWindow()
     local close = Button(header, 30, 30, "x", function() window:Hide() end)
     close:SetPoint("RIGHT", -4, 0)
     -- Record: opens each profession window not recorded yet, reads it, closes it.
-    window.record = Button(header, 230, 28, "", function()
-        ns.RecordProfessions()
+    window.record = Button(header, 230, 28, "", function(self)
+        if self.mode == "update" and self.crafter then
+            ns.UpdateProfession(self.crafter.profession)
+        elseif self.mode == "other" then
+            ns.Print(self.crafter and ("Log in to %s to update their recipes."):format(ns.DisplayName(self.crafter.record))
+                or "Press this on each character to record their recipes.")
+        else
+            ns.RecordProfessions()
+        end
         Refresh()
     end)
     window.record:SetPoint("RIGHT", close, "LEFT", -8, 0)
     window.record.label:SetTextColor(1, 0.85, 0.45)
     window.record:SetScript("OnEnter", function(self)
         GameTooltip:SetOwner(self, "ANCHOR_BOTTOM")
-        GameTooltip:AddLine("Record my professions", 1, 1, 1)
+        local crafter = self.crafter
+        local book = crafter and ns.db.recipes[crafter.key] and ns.db.recipes[crafter.key][crafter.profession]
+        if self.mode == "update" then
+            GameTooltip:AddLine("Update my " .. crafter.profession, 1, 1, 1)
+            GameTooltip:AddLine("Reads your recipes again, so ones learned since show up. Last read: " .. Age(book and book.seen) .. ".", 1, 0.85, 0.45, true)
+        elseif self.mode == "other" then
+            GameTooltip:AddLine("Update recipes", 1, 1, 1)
+            if crafter then
+                GameTooltip:AddLine(("Log in to %s to update their %s recipes. Last read: %s."):format(
+                    ns.DisplayName(crafter.record), crafter.profession, Age(book and book.seen)), 0.9, 0.9, 0.9, true)
+            end
+        else
+            GameTooltip:AddLine("Record my professions", 1, 1, 1)
+        end
         local names = {}
         for _, item in ipairs(self.missing or {}) do names[#names + 1] = item.name end
         if #names > 0 then GameTooltip:AddLine("Not recorded yet: " .. table.concat(names, ", "), 1, 0.85, 0.45, true) end

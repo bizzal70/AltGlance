@@ -1,5 +1,9 @@
 # AltGlance
 
+## 0.10.2
+
+- The **Record** button is now always there. Once your professions are recorded it reads **Update my Cooking** (or whichever of your professions is shown): press it to read that profession again, so recipes learned since show up. Its tooltip says when it was last read. On another character's profession it is greyed and says who to log in to.
+
 ## 0.10.1
 
 - **Record** now records one profession per press, and then shows the next one ("Record my First Aid"). The game lets an addon open a profession window only straight after a click, so opening the second one by itself was blocked ("Interface action failed because of an AddOn").

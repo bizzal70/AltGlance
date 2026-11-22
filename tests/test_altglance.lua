@@ -735,7 +735,7 @@ do
     check(#openedLines == 2 and openedLines[2] == 129 and closed == 2, "and the next press records that one")
     check(ns.db.recipes[me]["First Aid"] and #ns.db.recipes[me]["First Aid"].list == 1, "First Aid's recipes are recorded")
     check(ns.db.recordTried[me].Mining, "Mining, with nothing to record, is not offered again")
-    check(not record:IsShown(), "and the button goes once everything is recorded")
+    check(record.label:GetText() == "Update my First Aid", "once everything is recorded, the button turns into Update: " .. tostring(record.label:GetText()))
     -- The game not opening the window for an addon.
     ns.db.recipes[me]["First Aid"] = nil
     C_TradeSkillUI.OpenTradeSkill = function() end
@@ -744,4 +744,27 @@ do
     for _ = 1, 40 do RunTimers() end
     check(printed[#printed]:find("did not open your First Aid window", 1, true) ~= nil, "if the game does not open it, it says so: " .. tostring(printed[#printed]))
     check(record:IsShown() and record.label:GetText() == "Record my First Aid", "and the button stays for another try")
+    -- Once everything is recorded, the button stays, to update the profession shown.
+    C_TradeSkillUI.OpenTradeSkill = function(line) openedLines[#openedLines + 1] = line; open = LINES[line]; Fire("TRADE_SKILL_SHOW") end
+    record.__scripts.OnClick(record)
+    for _ = 1, 40 do RunTimers() end
+    ns.RefreshPlanner()
+    check(record:IsShown() and record.label:GetText() == "Update my First Aid", "with everything recorded, it offers to update the profession shown: " .. tostring(record.label:GetText()))
+    local before = #openedLines
+    record.__scripts.OnClick(record)
+    for _ = 1, 40 do RunTimers() end
+    check(#openedLines == before + 1 and openedLines[#openedLines] == 129 and printed[#printed]:find("Updated your First Aid recipes: 1.", 1, true) ~= nil,
+        "pressing it reads that profession again: " .. tostring(printed[#printed]))
+    check(ns.RecipeAge(time()) == "just now" and ns.RecipeAge(time() - 3 * 86400) == "3 days ago", "the tooltip says when it was last read")
+    -- Another character's profession: greyed, and it says who to log in to.
+    ns.db.recipes["Player-5"] = { Alchemy = { seen = time(), list = { { name = "Minor Healing Potion", reagents = { { id = 765, n = 1 } } } } } }
+    ns.RefreshPlanner()
+    for _ = 1, 5 do
+        if record.label:GetText() == "Update recipes" then break end
+        AltGlancePlanner.next.__scripts.OnClick(AltGlancePlanner.next)
+    end
+    check(record.label:GetText() == "Update recipes", "on another character's profession it cannot update")
+    record.__scripts.OnClick(record)
+    check(printed[#printed]:find("Log in to Bizz Wolf", 1, true) ~= nil, "and says who to log in to: " .. tostring(printed[#printed]))
+    ns.db.recipes["Player-5"] = nil
 end
