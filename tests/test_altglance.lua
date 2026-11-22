@@ -272,6 +272,8 @@ UnitName = function() return ME.name end
 Fire("MAIL_SHOW")
 local panel = ns.mailPanel
 check(#ns.MailRecipients() == 0, "a character whose full name is not known yet is not offered (mail only goes to full names)")
+ns.RefreshMailPanel()
+check(panel.questNote:GetText():find("Log in to Mirabel", 1, true) ~= nil, "and the panel says why nobody is offered: " .. tostring(panel.questNote:GetText()))
 ns.db.chars["Player-1"].fullName = "Mirabel Brightwater"
 ns.db.chars["Player-2"].fullName = "Tolan Grimbane"
 ns.RefreshMailPanel()
@@ -821,4 +823,18 @@ do
     Fire("PLAYER_REGEN_ENABLED")
     check(bound[w] ~= nil, "but are once it ends")
     w:Hide(); w.__scripts.OnHide(w)
+end
+
+-- Scroll bars: shown only when the list is longer than the window; the
+-- arrows step one row, never past either end.
+do
+    local scrolled
+    local bar = ns.CreateScrollBar(UIParent, 300, function(value) scrolled = value end)
+    bar:Update(0, 5, 14)
+    check(not bar:IsShown(), "a list that fits needs no scroll bar")
+    bar:Update(0, 30, 14)
+    check(bar:IsShown(), "a longer list gets one")
+    check(AltGlanceWindow.scrollBar ~= nil and AltGlancePlanner.scrollBar ~= nil, "both the list and the planner have one")
+    check(ns.FitWindow(AltGlancePlanner) > 0 and ns.TextScale() >= 1, "windows are scaled to the text size and the screen")
+    check(ns.MailNobodyReason() ~= nil, "there is always a reason to show")
 end

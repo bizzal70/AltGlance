@@ -225,6 +225,36 @@ function ns.FillBankAltName()
     end
 end
 
+-- Why no character is offered to send to, in a line.
+function ns.MailNobodyReason()
+    local me = ns.CurrentKey()
+    local mine = me and ns.db.chars[me]
+    if not mine then return "This character is not recorded yet." end
+    local others, otherFaction, otherRealm, noName = 0, 0, 0, {}
+    for key, record in pairs(ns.db.chars) do
+        if key ~= me then
+            others = others + 1
+            if record.faction ~= mine.faction then
+                otherFaction = otherFaction + 1
+            elseif not ns.SameRealm(me, mine, key, record) then
+                otherRealm = otherRealm + 1
+            elseif type(record.fullName) ~= "string" or record.fullName == "" then
+                noName[#noName + 1] = ns.DisplayName(record)
+            end
+        end
+    end
+    if others == 0 then
+        return "Log in to your other characters once with AltGlance on, and they appear here."
+    end
+    if #noName > 0 then
+        return ("Log in to %s once more, so AltGlance learns the full name mail needs."):format(table.concat(noName, ", "))
+    end
+    local parts = {}
+    if otherFaction > 0 then parts[#parts + 1] = ("%d on the other faction"):format(otherFaction) end
+    if otherRealm > 0 then parts[#parts + 1] = ("%d on another realm"):format(otherRealm) end
+    return ("Your other characters are %s: mail cannot reach them from here."):format(table.concat(parts, " and "))
+end
+
 -- The character chosen to send to: the one last used from this character,
 -- else the bank alt, else the first on the list.
 function ns.MailTarget()
@@ -488,7 +518,7 @@ local function Outline(frame, alpha)
 end
 
 local function Label(parent, font, justify)
-    local label = parent:CreateFontString(nil, "OVERLAY", font or "GameFontHighlight")
+    local label = parent:CreateFontString(nil, "OVERLAY", font or ns.Font("GameFontHighlight"))
     label:SetJustifyH(justify or "LEFT")
     label:SetWordWrap(false)
     return label
@@ -496,7 +526,7 @@ end
 
 -- A small heading over each part of the panel.
 local function Heading(text, y)
-    local heading = Label(panel, "GameFontNormalSmall")
+    local heading = Label(panel, ns.Font("GameFontNormalSmall"))
     heading:SetPoint("TOPLEFT", PAD, y)
     heading:SetText(text)
     heading:SetTextColor(ACCENT_R, ACCENT_G, ACCENT_B, 0.85)
@@ -512,7 +542,7 @@ local function Button(parent, width, height, text, onClick)
     local hover = button:CreateTexture(nil, "HIGHLIGHT")
     hover:SetAllPoints()
     hover:SetColorTexture(1, 1, 1, 0.08)
-    button.label = Label(button, "GameFontHighlight", "CENTER")
+    button.label = Label(button, ns.Font("GameFontHighlight"), "CENTER")
     button.label:SetPoint("LEFT", 8, 0)
     button.label:SetPoint("RIGHT", -8, 0)
     button.label:SetText(text)
@@ -537,7 +567,7 @@ function ns.RefreshMailPanel()
         panel.target:SetText(target.record.fullName)
         panel.target:SetTextColor(ClassColour(target.record.classFile))
     else
-        panel.target:SetText("No alt to send to yet")
+        panel.target:SetText("Nobody to send to")
         panel.target:SetTextColor(0.6, 0.6, 0.6)
     end
     panel.prev:SetShown(#list > 1)
@@ -570,12 +600,18 @@ function ns.RefreshMailPanel()
     local names = {}
     for name, count in pairs(kept) do names[#names + 1] = ("%s %d"):format(name, count) end
     table.sort(names)
-    panel.questNote:SetText(#names > 0 and ("Kept for quests: " .. table.concat(names, ", ")) or "")
+    if target then
+        panel.questNote:SetText(#names > 0 and ("Kept for quests: " .. table.concat(names, ", ")) or "")
+    else
+        -- Nobody offered: say why, where the quest note goes.
+        local ok, reason = pcall(ns.MailNobodyReason)
+        panel.questNote:SetText(ok and reason or "")
+    end
     local mails = math.ceil(stacks / PER_MAIL)
     if sending then
         panel.summary:SetText("Sending...")
     elseif not target then
-        panel.summary:SetText("Log in to an alt once, and they appear here.")
+        panel.summary:SetText("Nobody to send to yet")
     elseif own > 0 and stacks > 0 then
         panel.summary:SetText("Your mail (" .. Plural(own, "item") .. "), then " .. Plural(stacks, "stack"))
     elseif own > 0 then
@@ -611,9 +647,10 @@ local function PlacePanel()
     end
     if right == placedRight and top == placedTop then return end
     placedRight, placedTop = right, top
-    local scale = (MailFrame:GetEffectiveScale() or 1) / (UIParent:GetEffectiveScale() or 1)
+    -- In UIParent's units, then in the panel's own (it may be scaled to fit).
+    local scale = (MailFrame:GetEffectiveScale() or 1) / (UIParent:GetEffectiveScale() or 1) / (panel:GetScale() or 1)
     panel:ClearAllPoints()
-    panel:SetPoint("TOPLEFT", UIParent, "BOTTOMLEFT", right * scale + 6, top * scale)
+    panel:SetPoint("TOPLEFT", UIParent, "BOTTOMLEFT", right * scale + 6 / (panel:GetScale() or 1), top * scale)
 end
 
 local function CreatePanel()
@@ -636,7 +673,7 @@ local function CreatePanel()
         PlacePanel()
     end)
 
-    local title = Label(panel, "GameFontNormalLarge")
+    local title = Label(panel, ns.Font("GameFontNormalLarge"))
     title:SetPoint("TOPLEFT", PAD, -PAD)
     title:SetText("Send materials")
     title:SetTextColor(1, 0.85, 0.6)
@@ -653,7 +690,7 @@ local function CreatePanel()
     panel.prev:SetPoint("TOPLEFT", PAD, y)
     panel.next = Button(panel, 30, 30, ">", function() ns.StepMailTarget(1); ns.RefreshMailPanel() end)
     panel.next:SetPoint("TOPRIGHT", -PAD, y)
-    panel.target = Label(panel, "GameFontHighlight", "CENTER")
+    panel.target = Label(panel, ns.Font("GameFontHighlight"), "CENTER")
     panel.target:SetPoint("TOPLEFT", PAD + 34, y - 8)
     panel.target:SetPoint("TOPRIGHT", -PAD - 34, y - 8)
     y = y - 36
@@ -664,7 +701,7 @@ local function CreatePanel()
         if target then ns.ToggleBankAlt(target.key) end
         ns.RefreshMailPanel()
     end)
-    panel.bank.label:SetFontObject("GameFontHighlightSmall")
+    panel.bank.label:SetFontObject(ns.Font("GameFontHighlightSmall"))
     panel.bank:SetPoint("TOPLEFT", PAD, y)
     y = y - 40
 
@@ -686,7 +723,7 @@ local function CreatePanel()
         toggle.label:SetPoint("RIGHT", -44, 0)
         toggle.label:SetJustifyH("LEFT")
         toggle.label:SetText(kind.label)
-        toggle.state = Label(toggle, "GameFontHighlightSmall", "RIGHT")
+        toggle.state = Label(toggle, ns.Font("GameFontHighlightSmall"), "RIGHT")
         toggle.state:SetPoint("RIGHT", -10, 0)
         panel.toggles[kind.key] = toggle
         y = y - 32
@@ -694,12 +731,12 @@ local function CreatePanel()
 
     -- What will go, then Send.
     y = y - 6
-    panel.summary = Label(panel, "GameFontHighlightSmall", "CENTER")
+    panel.summary = Label(panel, ns.Font("GameFontHighlightSmall"), "CENTER")
     panel.summary:SetPoint("TOPLEFT", PAD, y)
     panel.summary:SetPoint("TOPRIGHT", -PAD, y)
     y = y - 16
     -- Materials a quest in your log asks for stay in your bags; this says which.
-    panel.questNote = Label(panel, "GameFontDisableSmall", "CENTER")
+    panel.questNote = Label(panel, ns.Font("GameFontDisableSmall"), "CENTER")
     panel.questNote:SetPoint("TOPLEFT", PAD, y)
     panel.questNote:SetPoint("TOPRIGHT", -PAD, y)
     panel.questNote:SetWordWrap(true)
@@ -708,7 +745,7 @@ local function CreatePanel()
         if not sending then ns.SendNextMail() end
         ns.RefreshMailPanel()
     end)
-    panel.send.label:SetFontObject("GameFontNormalLarge")
+    panel.send.label:SetFontObject(ns.Font("GameFontNormalLarge"))
     panel.send:SetPoint("TOPLEFT", PAD, y)
     y = y - 34 - PAD
 
@@ -735,6 +772,8 @@ frame:SetScript("OnEvent", function(self, event)
         Settings()
         if not panel then CreatePanel() end
         panel:Show()
+        ns.FitWindow(panel)
+        placedRight = nil
         PlacePanel()
         -- No hook on Blizzard's Send Mail page: an addon's code running
         -- inside Blizzard's mail code marks it as touched, and in gamepad

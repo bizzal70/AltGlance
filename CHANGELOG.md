@@ -1,5 +1,11 @@
 # AltGlance
 
+## 0.11.0
+
+- **Fits any screen and text size.** The list, the profession planner and the Send materials panel now keep their layout whatever text size you play with: with bigger text the whole window is drawn bigger, so text never runs into its neighbours, and a window that would not fit your screen (a handheld's, say) is shrunk to fit.
+- **Scroll bars** on the character list and the planner's recipe list, with up and down buttons you can press with a controller's cursor; click above or below the bar's handle to jump a page. Only shown when the list is longer than the window.
+- **Send materials says why nobody is offered**, instead of just "No alt to send to yet": your other characters are on the other faction or another realm, or AltGlance still needs to learn a name (log in to them once more), or no other character is recorded yet.
+
 ## 0.10.4
 
 - **Controller:** the B button now closes the AltGlance list and the profession planner, like the X and Escape. While one is open, B closes it; once it is closed, B does whatever you have it set to again. (The Send materials panel still closes with the mailbox.)

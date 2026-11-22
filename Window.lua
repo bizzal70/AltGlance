@@ -24,14 +24,15 @@ local COLUMNS = {
 }
 local COLUMN_GAP = 10
 local REMOVE_WIDTH = 22
+local SCROLL_WIDTH = 22   -- room for the scroll bar right of the rows
 
-local WIDTH = PADDING * 2 + REMOVE_WIDTH
+local WIDTH = PADDING * 2 + REMOVE_WIDTH + SCROLL_WIDTH
 for _, column in ipairs(COLUMNS) do
     WIDTH = WIDTH + column.width + COLUMN_GAP
 end
 local HEIGHT = HEADER_HEIGHT + HEADING_HEIGHT + ROW_HEIGHT * VISIBLE_ROWS + FOOTER_HEIGHT + 8
 
-local window, footerLabel, emptyLabel
+local window, footerLabel, emptyLabel, scrollBar
 local rows, headings = {}, {}
 local offset = 0
 local list = {}
@@ -172,7 +173,7 @@ end
 
 local function CreateRow(index)
     local row = CreateFrame("Button", nil, window)
-    row:SetSize(WIDTH - PADDING * 2, ROW_HEIGHT)
+    row:SetSize(WIDTH - PADDING * 2 - SCROLL_WIDTH, ROW_HEIGHT)
     row:SetPoint("TOPLEFT", PADDING, -(HEADER_HEIGHT + HEADING_HEIGHT + (index - 1) * ROW_HEIGHT))
     if index % 2 == 0 then
         Fill(row, 1, 1, 1, 0.03)
@@ -197,7 +198,7 @@ local function CreateRow(index)
     row.cells = {}
     local x = 8
     for _, column in ipairs(COLUMNS) do
-        local cell = Label(row, "GameFontHighlightSmall", column.justify)
+        local cell = Label(row, ns.Font("GameFontHighlightSmall"), column.justify)
         cell:SetPoint("LEFT", x, 0)
         cell:SetWidth(column.width)
         row.cells[column.key] = cell
@@ -245,7 +246,7 @@ local function CreateRow(index)
     local removeHover = remove:CreateTexture(nil, "HIGHLIGHT")
     removeHover:SetAllPoints()
     removeHover:SetColorTexture(0.9, 0.2, 0.2, 0.45)
-    local removeLabel = Label(remove, "GameFontDisableSmall", "CENTER")
+    local removeLabel = Label(remove, ns.Font("GameFontDisableSmall"), "CENTER")
     removeLabel:SetPoint("CENTER")
     removeLabel:SetText("x")
     remove:SetScript("OnClick", function()
@@ -279,6 +280,7 @@ local function Refresh()
     local total
     list, total = ns.Characters()
     offset = math.min(offset, math.max(0, #list - VISIBLE_ROWS))
+    scrollBar:Update(offset, #list, VISIBLE_ROWS)
 
     for index = 1, VISIBLE_ROWS do
         local record = list[index + offset]
@@ -386,7 +388,7 @@ local function CreateWindow()
         ns.db.windowPosition = { point, relativePoint, x, y }
     end)
     Fill(header, 0.16, 0.12, 0.08, 1)
-    local title = Label(header, "GameFontNormalLarge")
+    local title = Label(header, ns.Font("GameFontNormalLarge"))
     title:SetPoint("LEFT", PADDING, 0)
     title:SetText("AltGlance")
     title:SetTextColor(1, 0.9, 0.75)
@@ -416,7 +418,7 @@ local function CreateWindow()
     local plannerHover = planner:CreateTexture(nil, "HIGHLIGHT")
     plannerHover:SetAllPoints()
     plannerHover:SetColorTexture(1, 1, 1, 0.12)
-    local plannerLabel = Label(planner, "GameFontHighlight", "CENTER")
+    local plannerLabel = Label(planner, ns.Font("GameFontHighlight"), "CENTER")
     plannerLabel:SetPoint("CENTER")
     plannerLabel:SetText("Professions")
     planner:SetScript("OnClick", function() ns.TogglePlanner() end)
@@ -429,7 +431,7 @@ local function CreateWindow()
         heading:SetSize(column.width, HEADING_HEIGHT)
         heading:SetPoint("TOPLEFT", x, -HEADER_HEIGHT)
         heading.column = column
-        heading.label = Label(heading, "GameFontDisableSmall", column.justify)
+        heading.label = Label(heading, ns.Font("GameFontDisableSmall"), column.justify)
         heading.label:SetAllPoints()
         heading.label:SetTextColor(ACCENT_R, ACCENT_G, ACCENT_B, 0.9)
         if column.sort then
@@ -442,7 +444,7 @@ local function CreateWindow()
         x = x + column.width + COLUMN_GAP
     end
 
-    emptyLabel = window:CreateFontString(nil, "OVERLAY", "GameFontDisable")
+    emptyLabel = window:CreateFontString(nil, "OVERLAY", ns.Font("GameFontDisable"))
     emptyLabel:SetPoint("CENTER")
     emptyLabel:SetText("No characters recorded yet.")
 
@@ -451,9 +453,9 @@ local function CreateWindow()
     footer:SetPoint("BOTTOMRIGHT", -1, 1)
     footer:SetHeight(FOOTER_HEIGHT)
     Fill(footer, 0, 0, 0, 0.35)
-    footerLabel = Label(footer, "GameFontHighlight")
+    footerLabel = Label(footer, ns.Font("GameFontHighlight"))
     footerLabel:SetPoint("LEFT", PADDING, 0)
-    local hint = Label(footer, "GameFontDisableSmall", "RIGHT")
+    local hint = Label(footer, ns.Font("GameFontDisableSmall"), "RIGHT")
     hint:SetPoint("RIGHT", -PADDING, 0)
     hint:SetText("Click a heading to sort.")
 
@@ -462,6 +464,13 @@ local function CreateWindow()
         offset = math.max(0, offset - delta)
         Refresh()
     end)
+    -- A scroll bar too, for a controller or a list longer than the window.
+    scrollBar = ns.CreateScrollBar(window, ROW_HEIGHT * VISIBLE_ROWS, function(value)
+        offset = value
+        Refresh()
+    end)
+    scrollBar:SetPoint("TOPRIGHT", -PADDING, -(HEADER_HEIGHT + HEADING_HEIGHT))
+    window.scrollBar = scrollBar
 end
 
 function ns.ToggleWindow()
@@ -472,6 +481,7 @@ function ns.ToggleWindow()
         ns.Snapshot()
         Refresh()
         window:Show()
+        ns.FitWindow(window)
     end
 end
 

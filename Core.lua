@@ -158,6 +158,126 @@ function ns.CloseWithPadB(window)
     window:HookScript("OnHide", function(self) pcall(PadApply, self) end)
 end
 
+---------------------------------------------------------------------------
+-- Fitting the windows to any screen and text size
+---------------------------------------------------------------------------
+
+-- How much bigger the game's text is than the usual size (GameFontHighlight
+-- at 12), 1 to 2.
+local BASE_TEXT = 12
+function ns.TextScale()
+    local font = GameFontHighlight
+    if font and font.GetFont then
+        local ok, _, size = pcall(font.GetFont, font)
+        if ok and type(size) == "number" and size > 0 then
+            return math.min(2, math.max(1, size / BASE_TEXT))
+        end
+    end
+    return 1
+end
+
+-- AltGlance's windows are laid out for the usual text size. Its text uses
+-- copies of the game's fonts brought back to that size, and the whole
+-- window is scaled up instead (ns.FitWindow): the same look, just bigger,
+-- so a larger text size (or a handheld's) never makes text overlap.
+local pinned = {}
+function ns.Font(template)
+    if pinned[template] ~= nil then return pinned[template] or template end
+    local name = addonName .. template
+    local ok = pcall(function()
+        local source = _G[template]
+        local file, size, flags = source:GetFont()
+        assert(type(file) == "string" and type(size) == "number" and size > 0)
+        local font = CreateFont(name)
+        font:SetFontObject(source)
+        font:SetFont(file, size / ns.TextScale(), flags or "")
+    end)
+    pinned[template] = ok and name or false
+    return ok and name or template
+end
+
+-- Scales a window up as much as the game's text is bigger than usual, but
+-- never past the screen: a window that would not fit is shrunk to fit.
+function ns.FitWindow(window)
+    local scale = ns.TextScale()
+    local okSize, width, height = pcall(function() return window:GetWidth(), window:GetHeight() end)
+    local okScreen, screenWidth, screenHeight = pcall(function() return UIParent:GetWidth(), UIParent:GetHeight() end)
+    if okSize and okScreen and type(width) == "number" and type(height) == "number" and width > 0 and height > 0
+            and type(screenWidth) == "number" and type(screenHeight) == "number" and screenWidth > 0 and screenHeight > 0 then
+        scale = math.min(scale, screenWidth * 0.96 / width, screenHeight * 0.92 / height)
+    end
+    pcall(window.SetScale, window, scale)
+    return scale
+end
+
+-- A scroll bar for a list: up and down buttons big enough to press with a
+-- controller's cursor, and a track that pages when clicked above or below
+-- its thumb. onScroll(offset) is called with the new first row.
+function ns.CreateScrollBar(parent, height, onScroll)
+    local bar = CreateFrame("Frame", nil, parent)
+    bar:SetSize(16, height)
+    bar.offset, bar.total, bar.visible = 0, 0, 1
+    local function Max() return math.max(0, bar.total - bar.visible) end
+    local function Arrow(text, point)
+        local button = CreateFrame("Button", nil, bar)
+        button:SetSize(16, 18)
+        button:SetPoint(point)
+        local back = button:CreateTexture(nil, "BACKGROUND")
+        back:SetAllPoints()
+        back:SetColorTexture(0.30, 0.22, 0.12, 1)
+        local hover = button:CreateTexture(nil, "HIGHLIGHT")
+        hover:SetAllPoints()
+        hover:SetColorTexture(1, 1, 1, 0.15)
+        local label = button:CreateFontString(nil, "OVERLAY", ns.Font("GameFontHighlightSmall"))
+        label:SetPoint("CENTER", 0, 1)
+        label:SetText(text)
+        return button
+    end
+    local up = Arrow("^", "TOP")
+    local down = Arrow("v", "BOTTOM")
+    up:SetScript("OnClick", function() onScroll(math.max(0, bar.offset - 1)) end)
+    down:SetScript("OnClick", function() onScroll(math.min(Max(), bar.offset + 1)) end)
+    local track = CreateFrame("Button", nil, bar)
+    track:SetPoint("TOPLEFT", up, "BOTTOMLEFT", 0, -2)
+    track:SetPoint("BOTTOMRIGHT", down, "TOPRIGHT", 0, 2)
+    local trackBack = track:CreateTexture(nil, "BACKGROUND")
+    trackBack:SetAllPoints()
+    trackBack:SetColorTexture(0, 0, 0, 0.45)
+    local thumb = track:CreateTexture(nil, "ARTWORK")
+    thumb:SetColorTexture(0.85, 0.63, 0.40, 0.8)
+    bar.thumb = thumb
+    track:SetScript("OnClick", function()
+        -- Above the thumb pages up, below it pages down.
+        local page = math.max(1, bar.visible - 1)
+        local okCursor, cursorY = pcall(function()
+            local _, y = GetCursorPosition()
+            return y / track:GetEffectiveScale()
+        end)
+        local okThumb, thumbTop = pcall(thumb.GetTop, thumb)
+        if okCursor and okThumb and type(cursorY) == "number" and type(thumbTop) == "number" and cursorY > thumbTop then
+            onScroll(math.max(0, bar.offset - page))
+        else
+            onScroll(math.min(Max(), bar.offset + page))
+        end
+    end)
+    function bar.Update(self, offset, total, visible)
+        self.offset, self.total, self.visible = offset, total, visible
+        if total <= visible then
+            self:Hide()
+            return
+        end
+        self:Show()
+        local trackHeight = height - 40
+        local thumbHeight = math.max(14, trackHeight * visible / total)
+        local y = (trackHeight - thumbHeight) * offset / math.max(1, total - visible)
+        thumb:ClearAllPoints()
+        thumb:SetPoint("TOPLEFT", track, "TOPLEFT", 2, -y)
+        thumb:SetPoint("TOPRIGHT", track, "TOPRIGHT", -2, -y)
+        thumb:SetHeight(thumbHeight)
+    end
+    return bar
+end
+
 -- Sets a field only when the game gave a usable answer, so a value it
 -- withholds for a moment does not wipe out what was known.
 local function Keep(record, field, value)
