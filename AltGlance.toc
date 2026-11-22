@@ -2,7 +2,7 @@
 ## Title: AltGlance
 ## Notes: All your characters at a glance: level, gold, where they are, rested experience, professions and bag space, which character holds an item, a profession planner, and mails materials to your bank alt. Type /alts.
 ## Author: bizzal70
-## Version: 0.11.1
+## Version: 0.11.2
 ## X-Curse-Project-ID: 1792308
 ## SavedVariables: AltGlanceDB
 ## IconTexture: Interface\Icons\INV_Misc_GroupLooking

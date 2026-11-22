@@ -1175,6 +1175,8 @@ function ns.TogglePlanner()
     if window:IsShown() then
         window:Hide()
     else
+        -- Always open on all recipes; the filter is for while it is open.
+        ns.db.plannerFilter = "all"
         -- Start on the character being played, if they have recipes.
         crafters = Crafters()
         if crafters[pick] == nil or (crafters[1] and crafters[1].key == ns.CurrentKey() and crafters[pick].key ~= ns.CurrentKey()) then

@@ -1,5 +1,9 @@
 # AltGlance
 
+## 0.11.2
+
+- The profession planner always opens on **All recipes**. The filter button still narrows the list while it is open.
+
 ## 0.11.1
 
 - **The scroll bar's handle can be dragged**, and the mouse wheel scrolls over the bar too, not only over the list.
