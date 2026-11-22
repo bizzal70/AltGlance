@@ -156,8 +156,9 @@ end
 
 -- Whether materials can be mailed between the two: same realm and faction,
 -- and the crafter's full name is known (mail only goes to full names).
-local function CanSupply(crafter, record)
-    return crafter.fullName ~= nil and record.realm ~= nil and record.realm == crafter.realm
+local function CanSupply(crafterKey, crafter, key, record)
+    local realm = ns.RealmOf(key, record)
+    return crafter.fullName ~= nil and realm ~= nil and realm == ns.RealmOf(crafterKey, crafter)
         and record.faction ~= nil and record.faction == crafter.faction
 end
 
@@ -171,7 +172,7 @@ function ns.ReagentStock(crafterKey, id)
         if key ~= crafterKey then
             local count = Holds(record, id)
             if count > 0 then
-                local mailable = crafter ~= nil and CanSupply(crafter, record)
+                local mailable = crafter ~= nil and CanSupply(crafterKey, crafter, key, record)
                 others[#others + 1] = { key = key, record = record, count = count, mailable = mailable }
                 if mailable then fromAlts = fromAlts + count end
             end

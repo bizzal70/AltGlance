@@ -148,7 +148,7 @@ local function RowOnEnter(row)
     elseif record.faction then
         GameTooltip:AddLine(record.faction, 0.7, 0.7, 0.7)
     end
-    if record.realm then GameTooltip:AddLine(record.realm, 0.7, 0.7, 0.7) end
+    if record.realm and record.realm ~= "" then GameTooltip:AddLine(record.realm, 0.7, 0.7, 0.7) end
     if record.money then
         GameTooltip:AddLine(MoneyText(record.money), 1, 1, 1)
     end

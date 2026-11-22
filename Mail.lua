@@ -104,7 +104,7 @@ local function CanMail(mine, myKey, key, record)
     return key ~= myKey and type(record.fullName) == "string" and record.fullName ~= ""
         and record.fullName ~= mine.fullName
         and record.faction ~= nil and record.faction == mine.faction
-        and record.realm ~= nil and record.realm == mine.realm
+        and ns.RealmOf(key, record) ~= nil and ns.RealmOf(key, record) == ns.RealmOf(myKey, mine)
 end
 ns.CanMail = CanMail
 
@@ -148,8 +148,8 @@ end
 -- name is slow). AltGlanceDB.bankAlt["Realm|Faction"] = character key.
 ---------------------------------------------------------------------------
 
-local function Group(record)
-    return (record.realm or "?") .. "|" .. (record.faction or "?")
+local function Group(key, record)
+    return (ns.RealmOf(key, record) or "?") .. "|" .. (record.faction or "?")
 end
 
 -- This character's bank alt: its key and record, or nil. Never the
@@ -159,7 +159,7 @@ function ns.BankAlt()
     local me = ns.CurrentKey()
     local mine = me and ns.db.chars[me]
     if not mine then return end
-    local key = ns.db.bankAlt[Group(mine)]
+    local key = ns.db.bankAlt[Group(me, mine)]
     local record = key and ns.db.chars[key]
     if not record or not CanMail(mine, me, key, record) then return end
     return key, record
@@ -169,7 +169,7 @@ end
 function ns.IsBankAlt(key)
     Settings()
     local record = key and ns.db.chars[key]
-    return record ~= nil and ns.db.bankAlt[Group(record)] == key
+    return record ~= nil and ns.db.bankAlt[Group(key, record)] == key
 end
 
 -- Makes a character the bank alt for their realm and faction, or, given
@@ -178,7 +178,7 @@ function ns.ToggleBankAlt(key)
     Settings()
     local record = key and ns.db.chars[key]
     if not record then return end
-    local group = Group(record)
+    local group = Group(key, record)
     if ns.db.bankAlt[group] == key then
         ns.db.bankAlt[group] = nil
         ns.Print(ns.DisplayName(record) .. " is no longer your bank alt.")

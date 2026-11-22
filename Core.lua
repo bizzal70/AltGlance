@@ -77,6 +77,40 @@ function ns.CurrentKey()
     return Usable(guid) and guid or nil
 end
 
+-- The realm server number in a character's key (their GUID,
+-- "Player-<server>-<id>"): characters on the same realm share it.
+local function ServerID(key)
+    return type(key) == "string" and key:match("^Player%-(%d+)%-") or nil
+end
+
+-- A character's realm. Forever's GetRealmName sometimes gives an empty name
+-- (seen 2026-11-22: "" on one character, the full name on the others), so
+-- when it is missing it is taken from another character on the same realm
+-- server, going by the GUID.
+function ns.RealmOf(key, record)
+    if type(record.realm) == "string" and record.realm ~= "" then return record.realm end
+    local server = ServerID(key)
+    if not server then return nil end
+    for otherKey, other in pairs(ns.db.chars) do
+        if ServerID(otherKey) == server and type(other.realm) == "string" and other.realm ~= "" then
+            return other.realm
+        end
+    end
+    return "Realm " .. server
+end
+
+-- The realm name, from whichever of the game's functions gives one.
+local function ReadRealm()
+    for _, read in ipairs({
+        function() return GetRealmName() end,
+        function() return GetNormalizedRealmName and GetNormalizedRealmName() end,
+        function() return UnitFullName and select(2, UnitFullName("player")) end,
+    }) do
+        local ok, realm = pcall(read)
+        if ok and Usable(realm) and type(realm) == "string" and realm ~= "" then return realm end
+    end
+end
+
 -- Sets a field only when the game gave a usable answer, so a value it
 -- withholds for a moment does not wipe out what was known.
 local function Keep(record, field, value)
@@ -137,7 +171,9 @@ function ns.Snapshot()
         full = first .. " " .. second
     end
     Keep(record, "fullName", full)
-    Keep(record, "realm", GetRealmName())
+    -- An empty realm name is not kept (see ns.RealmOf).
+    if record.realm == "" then record.realm = nil end
+    Keep(record, "realm", ReadRealm())
     local className, classFile = UnitClass("player")
     Keep(record, "class", className)
     Keep(record, "classFile", classFile)
@@ -286,7 +322,7 @@ SlashCmdList.ALTGLANCE = function(msg)
                 ns.Print(ns.DisplayName(ns.db.chars[key]) .. " is already your bank alt.")
             else
                 local mine, theirs = ns.db.chars[ns.CurrentKey() or ""], ns.db.chars[key]
-                if mine and (mine.realm ~= theirs.realm or mine.faction ~= theirs.faction) then
+                if mine and (ns.RealmOf(ns.CurrentKey(), mine) ~= ns.RealmOf(key, theirs) or mine.faction ~= theirs.faction) then
                     ns.Print(ns.DisplayName(theirs) .. " is on another realm or faction, so they cannot be mailed from here.")
                 elseif not theirs.fullName then
                     ns.Print(theirs.name .. "'s full name is not known yet: log in to them once, then choose them again.")

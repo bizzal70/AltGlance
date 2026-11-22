@@ -279,6 +279,28 @@ check(panel and panel:IsShown(), "opening the mailbox shows the Send materials p
 local list = ns.MailRecipients()
 check(#list == 1 and list[1].record.fullName == "Mirabel Brightwater", "only characters this one can mail are offered: same realm and faction")
 check(#ns.MaterialsToSend() == 14, "ore, herbs, leather and cloth are picked up; food and soulbound items are not")
+-- Forever's GetRealmName can come back empty: the realm is then taken from
+-- another character on the same realm server (the number in the GUID).
+do
+    local chars = ns.db.chars
+    chars["Player-77-0A"] = { name = "Bizzall", fullName = "Bizzall Wolfbane", realm = "", faction = "Alliance" }
+    chars["Player-77-0B"] = { name = "Shannbizz", fullName = "Shannbizz Wolfbane", realm = "CAMWOW Realm 10", faction = "Alliance" }
+    chars["Player-78-0C"] = { name = "Farbizz", fullName = "Farbizz Wolfbane", realm = "CAMWOW Realm 9", faction = "Alliance" }
+    check(ns.RealmOf("Player-77-0A", chars["Player-77-0A"]) == "CAMWOW Realm 10", "an empty realm name is filled in from a character on the same realm server")
+    check(ns.CanMail(chars["Player-77-0A"], "Player-77-0A", "Player-77-0B", chars["Player-77-0B"])
+        and not ns.CanMail(chars["Player-77-0A"], "Player-77-0A", "Player-78-0C", chars["Player-78-0C"]),
+        "so a character with no realm name can still mail its alts on that realm, and not those elsewhere")
+    local realGuid, realRealm = UnitGUID, GetRealmName
+    UnitGUID = function() return "Player-77-0A" end
+    GetRealmName = function() return "" end
+    ns.db.bankAlt["CAMWOW Realm 10|Alliance"] = "Player-77-0B"
+    check(ns.BankAlt() == "Player-77-0B", "and finds the bank alt set for that realm")
+    Fire("PLAYER_MONEY")
+    check(chars["Player-77-0A"].realm == nil, "an empty realm name from the game is not saved")
+    UnitGUID, GetRealmName = realGuid, realRealm
+    chars["Player-77-0A"], chars["Player-77-0B"], chars["Player-78-0C"] = nil, nil, nil
+    ns.db.bankAlt["CAMWOW Realm 10|Alliance"] = nil
+end
 -- Materials a quest asks for stay in the bags.
 C_QuestLog = {
     GetNumQuestLogEntries = function() return 2, 1 end,

@@ -1,5 +1,9 @@
 # AltGlance
 
+## 0.9.1
+
+- **Fix: Send materials said "No alt to send to yet" on some characters.** Forever's game sometimes gives an empty realm name, so that character looked as if it were on a different realm from all your alts, and the bank alt was not found. AltGlance now never saves an empty realm name, tries the game's other ways of reading it, and otherwise works out the realm from your other characters on the same realm server. The profession planner's "who can mail it" uses the same fix.
+
 ## 0.9.0
 
 - **Send materials keeps what your quests need.** Cloth, ore, herbs and other materials a quest in your log asks you to collect ("Linen Cloth: 4/6") now stay in your bags instead of being mailed to your bank alt. Enough stacks are kept to cover what the quest wants, and the rest still go. The panel says what it kept ("Kept for quests: Linen Cloth 10"). Once the quest is handed in, they are sent as usual.
