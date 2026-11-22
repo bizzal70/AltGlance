@@ -88,6 +88,10 @@ Tick their box in the list's **Bank alt** column, press **Make this my bank alt*
 - **Nothing is sent anywhere.** The list is saved on your own computer with the game's other saved settings.
 - The **Bags free** column counts the bags a character carries, not their bank.
 
+## Controller
+
+With a game controller, the **B** button closes the AltGlance list and the profession planner, like the X and Escape do. While a window is open, B closes it; once it is closed, B goes back to whatever you have it set to. (In combat the game does not let addons change a button, so B goes back to normal when the fight ends.)
+
 ## More from this author
 
 Other small addons for World of Warcraft: Forever, all free:
