@@ -511,7 +511,7 @@ end
 ---------------------------------------------------------------------------
 
 local ACCENT_R, ACCENT_G, ACCENT_B = 0.85, 0.63, 0.40
-local WIDTH, HEIGHT, PAD = 740, 560, 12
+local WIDTH, HEIGHT, PAD = 740, 578, 12
 local HEADER = 38
 local LIST_TOP, LIST_WIDTH, ROW_HEIGHT, ROWS = 92, 300, 22, 18
 local DETAIL_LEFT = PAD + LIST_WIDTH + 16
@@ -739,6 +739,7 @@ local function Refresh()
     pick = math.min(math.max(pick, 1), math.max(#crafters, 1))
     local crafter = Current()
     window.empty:SetShown(crafter == nil)
+    window.padHint:SetShown(ns.GamepadMode and ns.GamepadMode() or false)
 
     -- Record / Update: the playing character's professions not recorded
     -- yet first; otherwise the profession shown, if it is theirs.
@@ -834,6 +835,24 @@ local function Refresh()
 end
 ns.RefreshPlanner = Refresh
 
+-- The controller's D-pad up and down: the recipe above or below, scrolling
+-- the list to keep it in sight.
+function ns.PlannerStep(delta)
+    if not window or not window:IsShown() or #recipes == 0 then return end
+    local index = 1
+    for position, entry in ipairs(recipes) do
+        if entry.recipe.name == selected then index = position end
+    end
+    index = math.min(#recipes, math.max(1, index + delta))
+    selected, quantity = recipes[index].recipe.name, 1
+    if index <= offset then
+        offset = index - 1
+    elseif index > offset + ROWS then
+        offset = index - ROWS
+    end
+    Refresh()
+end
+
 local function CreateRecipeRow(index)
     local row = CreateFrame("Button", nil, window)
     row:SetSize(LIST_WIDTH - 20, ROW_HEIGHT)
@@ -903,6 +922,13 @@ local function CreateWindow()
     Outline(window, 0.55)
     tinsert(UISpecialFrames, addonName .. "Planner")
     ns.CloseWithPadB(window)
+    -- While the planner is open the controller drives it (ahead of the list).
+    ns.PadKey(window, "PADDUP", function() ns.PlannerStep(-1) end, 2)
+    ns.PadKey(window, "PADDDOWN", function() ns.PlannerStep(1) end, 2)
+    ns.PadKey(window, "PADDLEFT", function() window.prev:Click() end, 2)
+    ns.PadKey(window, "PADDRIGHT", function() window.next:Click() end, 2)
+    ns.PadKey(window, "PAD3", function() window.add:Click() end, 2)
+    ns.PadKey(window, "PAD4", function() window.craft:Click() end, 2)
 
     local header = CreateFrame("Frame", nil, window)
     header:SetPoint("TOPLEFT", 1, -1)
@@ -1003,7 +1029,7 @@ local function CreateWindow()
     window.scrollBar = ns.CreateScrollBar(window, ROWS * ROW_HEIGHT, function(value)
         offset = value
         Refresh()
-    end)
+    end, 3)
     window.scrollBar:SetPoint("TOPLEFT", PAD + LIST_WIDTH - 16, -LIST_TOP)
     window.listEmpty = Label(window, ns.Font("GameFontDisable"), "CENTER")
     window.listEmpty:SetPoint("TOPLEFT", PAD, -(LIST_TOP + 20))
@@ -1011,6 +1037,10 @@ local function CreateWindow()
     window.listEmpty:SetText("None of these recipes right now.")
     local legend = Label(window, ns.Font("GameFontDisableSmall"))
     legend:SetPoint("TOPLEFT", PAD + 4, -(LIST_TOP + ROWS * ROW_HEIGHT + 6))
+    -- With a controller: which buttons do what.
+    window.padHint = Label(window, ns.Font("GameFontDisableSmall"))
+    window.padHint:SetPoint("TOPLEFT", PAD + 4, -(LIST_TOP + ROWS * ROW_HEIGHT + 22))
+    window.padHint:SetText("Controller: D-pad up/down picks a recipe, left/right changes profession.  X: add to plan.  Y: craft.  B: close.")
     legend:SetText("|cff66e666Green|r: can make now.  |cffffd133Yellow *|r: with materials from alts.")
 
     window.empty = Label(window, ns.Font("GameFontHighlight"), "CENTER")

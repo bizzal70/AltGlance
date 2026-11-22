@@ -374,6 +374,9 @@ local function CreateWindow()
     -- Lets Escape close the window.
     tinsert(UISpecialFrames, addonName .. "Window")
     ns.CloseWithPadB(window)
+    -- The controller's D-pad scrolls the list (the planner has it while open).
+    ns.PadKey(window, "PADDUP", function() offset = math.max(0, offset - 1); Refresh() end, 1)
+    ns.PadKey(window, "PADDDOWN", function() offset = offset + 1; Refresh() end, 1)
 
     local header = CreateFrame("Frame", nil, window)
     header:SetPoint("TOPLEFT", 1, -1)

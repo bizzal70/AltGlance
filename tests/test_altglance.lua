@@ -781,48 +781,31 @@ do
     ns.db.recipes["Player-5"] = nil
 end
 
--- The controller's B button closes the window while it is shown.
+-- Controller buttons: B closes; the list borrows the D-pad; the planner,
+-- ahead of it, the D-pad, X and Y. All handed back when a fight starts.
 do
     local bound = {}
-    SetOverrideBinding = function(owner, _, key, command) bound[owner] = { key = key, command = command } end
-    ClearOverrideBindings = function(owner) bound[owner] = nil end
-    local w = AltGlancePlanner
-    w:Show(); w.__scripts.OnShow(w)
-    check(bound[w] and bound[w].key == "PAD2" and bound[w].command == "CLICK " .. w.padClose:GetName() .. ":LeftButton",
-        "while the window is shown, the controller's B button is set to close it")
-    w.padClose.__scripts.OnClick(w.padClose)
-    check(not w:IsShown(), "pressing B closes it")
-    w.__scripts.OnHide(w)
-    check(bound[w] == nil, "and B gets its usual job back once it is closed")
-    IN_COMBAT = true
-    w:Show(); w.__scripts.OnShow(w)
-    check(bound[w] == nil, "bindings are not changed in combat")
-    IN_COMBAT = false
+    SetOverrideBinding = function(_, _, key, command) bound[key] = command end
+    ClearOverrideBindings = function() bound = {} end
+    local planner, list = AltGlancePlanner, AltGlanceWindow
+    planner:Hide(); list:Hide(); ns.PadApply()
+    check(next(bound) == nil, "with no window open, no controller button is borrowed")
+    list:Show(); ns.PadApply()
+    check(bound.PAD2 == "CLICK AltGlanceWindowPadPAD2:LeftButton" and bound.PADDUP ~= nil and bound.PAD3 == nil,
+        "the list borrows B to close and the D-pad to scroll")
+    planner:Show(); ns.PadApply()
+    check(bound.PAD2 == "CLICK AltGlancePlannerPadPAD2:LeftButton" and bound.PADDDOWN == "CLICK AltGlancePlannerPadPADDDOWN:LeftButton"
+        and bound.PAD3 ~= nil and bound.PAD4 ~= nil and bound.PADDLEFT ~= nil, "with the planner open too, it has B, the D-pad, X and Y")
+    check(pcall(ns.PlannerStep, 1) and pcall(ns.PlannerStep, -1), "the D-pad steps through the recipes")
+    AltGlancePlannerPadPAD2.__scripts.OnClick(AltGlancePlannerPadPAD2)
+    check(not planner:IsShown(), "B closes the planner")
+    ns.PadApply()
+    check(bound.PAD2 == "CLICK AltGlanceWindowPadPAD2:LeftButton" and bound.PAD3 == nil, "then the list has them again, and the next B closes it")
+    Fire("PLAYER_REGEN_DISABLED")
+    check(next(bound) == nil, "when a fight starts every borrowed button is handed back")
     Fire("PLAYER_REGEN_ENABLED")
-    check(bound[w] ~= nil, "but are once it ends")
-    w:Hide(); w.__scripts.OnHide(w)
-end
-
--- And the main list: the controller's B button closes the window while it is shown.
-do
-    local bound = {}
-    SetOverrideBinding = function(owner, _, key, command) bound[owner] = { key = key, command = command } end
-    ClearOverrideBindings = function(owner) bound[owner] = nil end
-    local w = AltGlanceWindow
-    w:Show(); w.__scripts.OnShow(w)
-    check(bound[w] and bound[w].key == "PAD2" and bound[w].command == "CLICK " .. w.padClose:GetName() .. ":LeftButton",
-        "while the window is shown, the controller's B button is set to close it")
-    w.padClose.__scripts.OnClick(w.padClose)
-    check(not w:IsShown(), "pressing B closes it")
-    w.__scripts.OnHide(w)
-    check(bound[w] == nil, "and B gets its usual job back once it is closed")
-    IN_COMBAT = true
-    w:Show(); w.__scripts.OnShow(w)
-    check(bound[w] == nil, "bindings are not changed in combat")
-    IN_COMBAT = false
-    Fire("PLAYER_REGEN_ENABLED")
-    check(bound[w] ~= nil, "but are once it ends")
-    w:Hide(); w.__scripts.OnHide(w)
+    check(bound.PAD2 ~= nil, "and borrowed again once it is over")
+    list:Hide(); ns.PadApply()
 end
 
 -- Scroll bars: shown only when the list is longer than the window; the
@@ -837,4 +820,18 @@ do
     check(AltGlanceWindow.scrollBar ~= nil and AltGlancePlanner.scrollBar ~= nil, "both the list and the planner have one")
     check(ns.FitWindow(AltGlancePlanner) > 0 and ns.TextScale() >= 1, "windows are scaled to the text size and the screen")
     check(ns.MailNobodyReason() ~= nil, "there is always a reason to show")
+end
+
+-- Dragging the scroll bar's handle scrolls the list.
+do
+    local scrolled
+    local bar = ns.CreateScrollBar(UIParent, 300, function(value) scrolled = value end)
+    bar:Update(0, 30, 14)
+    local cursorY = 200
+    GetCursorPosition = function() return 10, cursorY end
+    IsMouseButtonDown = function() return true end
+    bar.thumb.__scripts.OnMouseDown(bar.thumb)
+    cursorY = 200 - (bar.trackHeight - bar.thumbHeight) / 2
+    bar.thumb.__scripts.OnUpdate(bar.thumb)
+    check(scrolled == 8, "dragging the handle halfway down scrolls halfway: " .. tostring(scrolled))
 end

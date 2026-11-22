@@ -90,7 +90,7 @@ Tick their box in the list's **Bank alt** column, press **Make this my bank alt*
 
 ## Controller
 
-With a game controller, the **B** button closes the AltGlance list and the profession planner, like the X and Escape do. While a window is open, B closes it; once it is closed, B goes back to whatever you have it set to. (In combat the game does not let addons change a button, so B goes back to normal when the fight ends.)
+With a game controller, the **B** button closes the AltGlance list and the profession planner, like the X and Escape do. In the planner, the D-pad picks a recipe (up/down) and changes profession (left/right), **X** adds to the plan and **Y** crafts; with only the list open, the D-pad scrolls it. When a fight starts every button AltGlance borrowed is handed straight back. While a window is open, B closes it; once it is closed, B goes back to whatever you have it set to. (In combat the game does not let addons change a button, so B goes back to normal when the fight ends.)
 
 ## More from this author
 

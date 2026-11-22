@@ -1,5 +1,11 @@
 # AltGlance
 
+## 0.11.1
+
+- **The scroll bar's handle can be dragged**, and the mouse wheel scrolls over the bar too, not only over the list.
+- **Controller in the planner:** while it is open, D-pad up and down pick a recipe (the list scrolls along), left and right change character and profession, **X** adds to the plan, **Y** crafts, **B** closes. A line at the bottom says so when you play with a controller. With only the list open, the D-pad scrolls it.
+- **Borrowed controller buttons are handed back the moment a fight starts**, so your D-pad and face buttons always do their usual jobs in combat, even with an AltGlance window open. They are borrowed again once the fight is over.
+
 ## 0.11.0
 
 - **Fits any screen and text size.** The list, the profession planner and the Send materials panel now keep their layout whatever text size you play with: with bigger text the whole window is drawn bigger, so text never runs into its neighbours, and a window that would not fit your screen (a handheld's, say) is shrunk to fit.

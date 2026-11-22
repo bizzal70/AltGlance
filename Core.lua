@@ -122,40 +122,76 @@ local function ReadRealm()
     if ok and Usable(realm) and type(realm) == "string" and realm ~= "" then return realm end
 end
 
--- The controller's B button (PAD2) closes a window, as Escape does: while
--- the window is shown, B is bound to closing it, and it gets its usual job
--- back once the window hides. Bindings cannot change in combat, so a change
--- that falls in combat waits until it ends.
-local padWindows = {}
-local padFrame = CreateFrame("Frame")
-local function PadApply(window)
+-- Controller buttons for AltGlance's windows. While a window is shown, some
+-- controller buttons are borrowed for it (B closes it; the planner and the
+-- list add the D-pad and more): each is bound to an invisible button that
+-- does the job, and gets its usual job back once the window hides. When a
+-- fight starts every borrowed button is handed back at once (the last moment
+-- the game allows it), so the D-pad and face buttons always work in a fight,
+-- and they are borrowed again once it is over.
+local padOwner = CreateFrame("Frame")
+local padWindows = {}   -- { window =, priority =, keys = { [key] = button name } }, highest priority first
+local inFight = false
+
+local function PadApply()
     if not (SetOverrideBinding and ClearOverrideBindings) then return end
-    if InCombatLockdown and InCombatLockdown() then
-        padFrame.waiting = true
-        return
-    end
-    ClearOverrideBindings(window)
-    if window:IsShown() then
-        SetOverrideBinding(window, true, "PAD2", "CLICK " .. window.padClose:GetName() .. ":LeftButton")
+    if InCombatLockdown and InCombatLockdown() then return end
+    ClearOverrideBindings(padOwner)
+    if inFight then return end
+    local taken = {}
+    for _, entry in ipairs(padWindows) do
+        if entry.window:IsShown() then
+            for key, button in pairs(entry.keys) do
+                if not taken[key] then
+                    taken[key] = true
+                    SetOverrideBinding(padOwner, true, key, "CLICK " .. button .. ":LeftButton")
+                end
+            end
+        end
     end
 end
-padFrame:SetScript("OnEvent", function(self)
-    if not self.waiting then return end
-    self.waiting = false
-    for _, window in ipairs(padWindows) do pcall(PadApply, window) end
-end)
-pcall(padFrame.RegisterEvent, padFrame, "PLAYER_REGEN_ENABLED")
+function ns.PadApply() pcall(PadApply) end
 
+padOwner:SetScript("OnEvent", function(_, event)
+    if event == "PLAYER_REGEN_DISABLED" then
+        inFight = true
+        if ClearOverrideBindings then pcall(ClearOverrideBindings, padOwner) end
+    else
+        inFight = false
+        pcall(PadApply)
+    end
+end)
+pcall(padOwner.RegisterEvent, padOwner, "PLAYER_REGEN_DISABLED")
+pcall(padOwner.RegisterEvent, padOwner, "PLAYER_REGEN_ENABLED")
+
+-- Borrows a controller button for a window while it is shown: "PAD2" is B,
+-- "PAD3" X, "PAD4" Y, "PADDUP" and so on the D-pad. When two open windows
+-- want the same button, the one with the higher priority has it.
+function ns.PadKey(window, key, action, priority)
+    local entry
+    for _, existing in ipairs(padWindows) do
+        if existing.window == window then entry = existing end
+    end
+    if not entry then
+        entry = { window = window, priority = 0, keys = {} }
+        padWindows[#padWindows + 1] = entry
+        window:HookScript("OnShow", function() pcall(PadApply) end)
+        window:HookScript("OnHide", function() pcall(PadApply) end)
+    end
+    if priority then entry.priority = priority end
+    table.sort(padWindows, function(a, b) return a.priority > b.priority end)
+    local name = window:GetName() .. "Pad" .. key
+    -- Never placed on screen, and not clickable with the mouse.
+    local button = CreateFrame("Button", name, UIParent)
+    button:EnableMouse(false)
+    button:SetScript("OnClick", function() if window:IsShown() then action() end end)
+    entry.keys[key] = name
+    return button
+end
+
+-- The controller's B closes the window, as Escape does.
 function ns.CloseWithPadB(window)
-    -- An invisible button for the binding to press: never placed on screen,
-    -- and not clickable with the mouse.
-    local close = CreateFrame("Button", window:GetName() .. "PadClose", UIParent)
-    close:EnableMouse(false)
-    close:SetScript("OnClick", function() window:Hide() end)
-    window.padClose = close
-    padWindows[#padWindows + 1] = window
-    window:HookScript("OnShow", function(self) pcall(PadApply, self) end)
-    window:HookScript("OnHide", function(self) pcall(PadApply, self) end)
+    window.padClose = ns.PadKey(window, "PAD2", function() window:Hide() end)
 end
 
 ---------------------------------------------------------------------------
@@ -213,7 +249,7 @@ end
 -- A scroll bar for a list: up and down buttons big enough to press with a
 -- controller's cursor, and a track that pages when clicked above or below
 -- its thumb. onScroll(offset) is called with the new first row.
-function ns.CreateScrollBar(parent, height, onScroll)
+function ns.CreateScrollBar(parent, height, onScroll, wheelStep)
     local bar = CreateFrame("Frame", nil, parent)
     bar:SetSize(16, height)
     bar.offset, bar.total, bar.visible = 0, 0, 1
@@ -243,9 +279,49 @@ function ns.CreateScrollBar(parent, height, onScroll)
     local trackBack = track:CreateTexture(nil, "BACKGROUND")
     trackBack:SetAllPoints()
     trackBack:SetColorTexture(0, 0, 0, 0.45)
-    local thumb = track:CreateTexture(nil, "ARTWORK")
-    thumb:SetColorTexture(0.85, 0.63, 0.40, 0.8)
+    -- The handle: drag it, or click the track above or below it.
+    local thumb = CreateFrame("Button", nil, track)
+    local thumbTexture = thumb:CreateTexture(nil, "ARTWORK")
+    thumbTexture:SetAllPoints()
+    thumbTexture:SetColorTexture(0.85, 0.63, 0.40, 0.8)
+    local thumbHover = thumb:CreateTexture(nil, "HIGHLIGHT")
+    thumbHover:SetAllPoints()
+    thumbHover:SetColorTexture(1, 1, 1, 0.2)
     bar.thumb = thumb
+    local function CursorY()
+        local ok, y = pcall(function()
+            local _, cursorY = GetCursorPosition()
+            return cursorY / track:GetEffectiveScale()
+        end)
+        return ok and type(y) == "number" and y or nil
+    end
+    thumb:SetScript("OnMouseDown", function(self)
+        self.dragY, self.dragOffset = CursorY(), bar.offset
+        if not self.dragY then return end
+        self:SetScript("OnUpdate", function(handle)
+            if IsMouseButtonDown and not IsMouseButtonDown("LeftButton") then
+                handle:SetScript("OnUpdate", nil)
+                return
+            end
+            local y = CursorY()
+            local room = (bar.trackHeight or 0) - (bar.thumbHeight or 0)
+            if not y or room <= 0 then return end
+            local rows = math.floor((handle.dragY - y) / room * Max() + 0.5)
+            local value = math.min(Max(), math.max(0, handle.dragOffset + rows))
+            if value ~= bar.offset then onScroll(value) end
+        end)
+    end)
+    thumb:SetScript("OnMouseUp", function(self) self:SetScript("OnUpdate", nil) end)
+    thumb:SetScript("OnHide", function(self) self:SetScript("OnUpdate", nil) end)
+    -- The mouse wheel over any part of the bar scrolls too.
+    local function Wheel(_, delta)
+        local value = math.min(Max(), math.max(0, bar.offset - delta * (wheelStep or 1)))
+        if value ~= bar.offset then onScroll(value) end
+    end
+    for _, part in ipairs({ bar, up, down, track, thumb }) do
+        part:EnableMouseWheel(true)
+        part:SetScript("OnMouseWheel", Wheel)
+    end
     track:SetScript("OnClick", function()
         -- Above the thumb pages up, below it pages down.
         local page = math.max(1, bar.visible - 1)
@@ -269,6 +345,7 @@ function ns.CreateScrollBar(parent, height, onScroll)
         self:Show()
         local trackHeight = height - 40
         local thumbHeight = math.max(14, trackHeight * visible / total)
+        self.trackHeight, self.thumbHeight = trackHeight, thumbHeight
         local y = (trackHeight - thumbHeight) * offset / math.max(1, total - visible)
         thumb:ClearAllPoints()
         thumb:SetPoint("TOPLEFT", track, "TOPLEFT", 2, -y)
