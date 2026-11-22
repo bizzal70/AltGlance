@@ -1,5 +1,9 @@
 # AltGlance
 
+## 0.10.1
+
+- **Record** now records one profession per press, and then shows the next one ("Record my First Aid"). The game lets an addon open a profession window only straight after a click, so opening the second one by itself was blocked ("Interface action failed because of an AddOn").
+
 ## 0.10.0
 
 - **Record my professions:** a button at the top of the profession planner, shown while the character you are playing has a profession with recipes that is not recorded yet. Press it and AltGlance opens each of those profession windows in turn, records the recipes and closes it again: no need to open them yourself. Gathering professions without recipes (Herbalism, Skinning, Fishing) are skipped, and one found to have nothing to record is not offered again. If the game will not open a window for an addon, AltGlance says so, and opening it once yourself still works.

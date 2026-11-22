@@ -724,11 +724,15 @@ do
     if not AltGlancePlanner:IsShown() then ns.TogglePlanner() end
     ns.RefreshPlanner()
     local record = AltGlancePlanner.record
-    check(record:IsShown() and record.label:GetText() == "Record my 2 professions", "the planner shows the Record button: " .. tostring(record.label:GetText()))
+    check(record:IsShown() and record.label:GetText() == "Record my Mining (1 more)", "the planner shows the Record button: " .. tostring(record.label:GetText()))
     record.__scripts.OnClick(record)
     check(record.label:GetText() == "Recording...", "and says so while it works")
     for _ = 1, 40 do RunTimers() end
-    check(openedLines[1] == 186 and openedLines[2] == 129 and closed == 2, "each window is opened and closed in turn")
+    check(#openedLines == 1 and openedLines[1] == 186 and closed == 1, "one press opens one window (the game allows no more without a click), and closes it")
+    check(record:IsShown() and record.label:GetText() == "Record my First Aid", "then the button offers the next: " .. tostring(record.label:GetText()))
+    record.__scripts.OnClick(record)
+    for _ = 1, 40 do RunTimers() end
+    check(#openedLines == 2 and openedLines[2] == 129 and closed == 2, "and the next press records that one")
     check(ns.db.recipes[me]["First Aid"] and #ns.db.recipes[me]["First Aid"].list == 1, "First Aid's recipes are recorded")
     check(ns.db.recordTried[me].Mining, "Mining, with nothing to record, is not offered again")
     check(not record:IsShown(), "and the button goes once everything is recorded")

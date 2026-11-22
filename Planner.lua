@@ -148,8 +148,10 @@ end
 
 ---------------------------------------------------------------------------
 -- Record my professions: the game gives recipes only while a profession
--- window is open, so AltGlance opens each one not recorded yet, reads it,
--- and closes it again, one after another.
+-- window is open, so AltGlance opens one not recorded yet, reads it, and
+-- closes it again. One per press: the game lets an addon open a profession
+-- window only straight after a click ("Interface action failed because of
+-- an AddOn" for the second one, opened from a timer, seen 2026-11-22).
 ---------------------------------------------------------------------------
 
 -- Skill lines with no recipes: Herbalism, Skinning, Fishing, Archaeology.
@@ -218,7 +220,7 @@ local function Look()
         ns.Print(("%s has no recipes to record."):format(job.current.name))
     end
     Call(C_TradeSkillUI.CloseTradeSkill)
-    C_Timer.After(0.3, RecordNext)
+    FinishRecording()
 end
 
 -- Opens the next profession window waiting to be recorded.
@@ -237,7 +239,7 @@ function RecordNext()
     C_Timer.After(0.5, Look)
 end
 
--- The Record button: records every profession not recorded yet.
+-- The Record button: records the next profession not recorded yet.
 function ns.RecordProfessions()
     if recording then return end
     local queue = ns.UnrecordedProfessions()
@@ -245,7 +247,7 @@ function ns.RecordProfessions()
         ns.Print("All your professions with recipes are recorded.")
         return
     end
-    recording = { queue = queue }
+    recording = { queue = { queue[1] } }
     RecordNext()
     if ns.RefreshPlanner then pcall(ns.RefreshPlanner) end
 end
@@ -690,8 +692,8 @@ local function Refresh()
         window.record.label:SetText("Recording...")
     elseif #missing == 1 then
         window.record.label:SetText("Record my " .. missing[1].name)
-    else
-        window.record.label:SetText(("Record my %d professions"):format(#missing))
+    elseif #missing > 1 then
+        window.record.label:SetText(("Record my %s (%d more)"):format(missing[1].name, #missing - 1))
     end
     window.record.missing = missing
     window.prev:SetShown(#crafters > 1)
@@ -846,7 +848,7 @@ local function CreateWindow()
         local names = {}
         for _, item in ipairs(self.missing or {}) do names[#names + 1] = item.name end
         if #names > 0 then GameTooltip:AddLine("Not recorded yet: " .. table.concat(names, ", "), 1, 0.85, 0.45, true) end
-        GameTooltip:AddLine("The game shows recipes only in the profession window, so AltGlance opens each one, reads it and closes it again.", 0.8, 0.8, 0.8, true)
+        GameTooltip:AddLine("The game shows recipes only in the profession window, so AltGlance opens it, reads it and closes it again. One per press: the game lets an addon open a profession window only right after a click.", 0.8, 0.8, 0.8, true)
         GameTooltip:Show()
     end)
     window.record:SetScript("OnLeave", function() GameTooltip:Hide() end)
