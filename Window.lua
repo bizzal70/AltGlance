@@ -371,6 +371,7 @@ local function CreateWindow()
     Outline(window, 0.55)
     -- Lets Escape close the window.
     tinsert(UISpecialFrames, addonName .. "Window")
+    ns.CloseWithPadB(window)
 
     local header = CreateFrame("Frame", nil, window)
     header:SetPoint("TOPLEFT", 1, -1)

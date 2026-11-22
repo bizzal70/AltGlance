@@ -1,5 +1,9 @@
 # AltGlance
 
+## 0.10.4
+
+- **Controller:** the B button now closes the AltGlance list and the profession planner, like the X and Escape. While one is open, B closes it; once it is closed, B does whatever you have it set to again. (The Send materials panel still closes with the mailbox.)
+
 ## 0.10.3
 
 - Profession planner: a button beside the **<** and **>** arrows, named after the character you are playing ("Bizzall"), goes straight back to their professions after browsing your other characters. It is dimmed while you are already there.

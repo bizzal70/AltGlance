@@ -778,3 +778,47 @@ do
     check(printed[#printed]:find("Log in to Bizz Wolf", 1, true) ~= nil, "and says who to log in to: " .. tostring(printed[#printed]))
     ns.db.recipes["Player-5"] = nil
 end
+
+-- The controller's B button closes the window while it is shown.
+do
+    local bound = {}
+    SetOverrideBinding = function(owner, _, key, command) bound[owner] = { key = key, command = command } end
+    ClearOverrideBindings = function(owner) bound[owner] = nil end
+    local w = AltGlancePlanner
+    w:Show(); w.__scripts.OnShow(w)
+    check(bound[w] and bound[w].key == "PAD2" and bound[w].command == "CLICK " .. w.padClose:GetName() .. ":LeftButton",
+        "while the window is shown, the controller's B button is set to close it")
+    w.padClose.__scripts.OnClick(w.padClose)
+    check(not w:IsShown(), "pressing B closes it")
+    w.__scripts.OnHide(w)
+    check(bound[w] == nil, "and B gets its usual job back once it is closed")
+    IN_COMBAT = true
+    w:Show(); w.__scripts.OnShow(w)
+    check(bound[w] == nil, "bindings are not changed in combat")
+    IN_COMBAT = false
+    Fire("PLAYER_REGEN_ENABLED")
+    check(bound[w] ~= nil, "but are once it ends")
+    w:Hide(); w.__scripts.OnHide(w)
+end
+
+-- And the main list: the controller's B button closes the window while it is shown.
+do
+    local bound = {}
+    SetOverrideBinding = function(owner, _, key, command) bound[owner] = { key = key, command = command } end
+    ClearOverrideBindings = function(owner) bound[owner] = nil end
+    local w = AltGlanceWindow
+    w:Show(); w.__scripts.OnShow(w)
+    check(bound[w] and bound[w].key == "PAD2" and bound[w].command == "CLICK " .. w.padClose:GetName() .. ":LeftButton",
+        "while the window is shown, the controller's B button is set to close it")
+    w.padClose.__scripts.OnClick(w.padClose)
+    check(not w:IsShown(), "pressing B closes it")
+    w.__scripts.OnHide(w)
+    check(bound[w] == nil, "and B gets its usual job back once it is closed")
+    IN_COMBAT = true
+    w:Show(); w.__scripts.OnShow(w)
+    check(bound[w] == nil, "bindings are not changed in combat")
+    IN_COMBAT = false
+    Fire("PLAYER_REGEN_ENABLED")
+    check(bound[w] ~= nil, "but are once it ends")
+    w:Hide(); w.__scripts.OnHide(w)
+end

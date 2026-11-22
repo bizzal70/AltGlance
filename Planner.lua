@@ -901,6 +901,7 @@ local function CreateWindow()
     Fill(window, 0.05, 0.05, 0.06, 0.97)
     Outline(window, 0.55)
     tinsert(UISpecialFrames, addonName .. "Planner")
+    ns.CloseWithPadB(window)
 
     local header = CreateFrame("Frame", nil, window)
     header:SetPoint("TOPLEFT", 1, -1)
