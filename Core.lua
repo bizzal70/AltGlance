@@ -389,14 +389,61 @@ local function ReadBags()
     return free, total
 end
 
--- Writes down how the current character stands right now.
-function ns.Snapshot()
+local function ReadXP(record)
+    Keep(record, "xp", UnitXP("player"))
+    Keep(record, "xpMax", UnitXPMax("player"))
+    -- nil from the game means "not rested", which is an answer too.
+    local rested = GetXPExhaustion()
+    if rested == nil or Usable(rested) then
+        record.rested = rested or 0
+    end
+    local resting = IsResting()
+    if Usable(resting) then
+        record.resting = resting and true or false
+    end
+end
+
+local function ReadBagSpace(record)
+    local free, total = ReadBags()
+    -- Every character has a backpack, so no bag space at all means the
+    -- bags are not loaded yet (just after logging in), not an empty answer.
+    if free and total > 0 then
+        record.bagFree, record.bagTotal = free, total
+    end
+end
+
+-- What each frequent event changes, so only that is read again; anything
+-- else (logging in, levelling, entering the world) reads everything.
+local PARTS = {
+    money = function(record) Keep(record, "money", GetMoney()) end,
+    xp = ReadXP,
+    zone = function(record) Keep(record, "zone", GetRealZoneText()) end,
+    professions = function(record)
+        local professions = ReadProfessions()
+        if professions then record.professions = professions end
+    end,
+    bags = ReadBagSpace,
+}
+ns.EVENT_PARTS = {
+    PLAYER_MONEY = "money", PLAYER_XP_UPDATE = "xp", UPDATE_EXHAUSTION = "xp", PLAYER_UPDATE_RESTING = "xp",
+    ZONE_CHANGED_NEW_AREA = "zone", SKILL_LINES_CHANGED = "professions", BAG_UPDATE_DELAYED = "bags",
+}
+local readInFull = false   -- the whole record has been read this session
+
+-- Writes down how the current character stands right now: everything, or
+-- only one part ("money", "xp", "zone", "professions", "bags").
+function ns.Snapshot(part)
     local key = ns.CurrentKey()
     if not key then return end
     local record = ns.db.chars[key]
     if not record then
         record = {}
         ns.db.chars[key] = record
+    end
+    if part and PARTS[part] and readInFull and record.name then
+        PARTS[part](record)
+        record.seen = time()
+        return record
     end
 
     -- Forever characters have a first and a last name, and first names are
@@ -428,28 +475,12 @@ function ns.Snapshot()
     Keep(record, "money", GetMoney())
     Keep(record, "zone", GetRealZoneText())
 
-    Keep(record, "xp", UnitXP("player"))
-    Keep(record, "xpMax", UnitXPMax("player"))
-    -- nil from the game means "not rested", which is an answer too.
-    local rested = GetXPExhaustion()
-    if rested == nil or Usable(rested) then
-        record.rested = rested or 0
-    end
-    local resting = IsResting()
-    if Usable(resting) then
-        record.resting = resting and true or false
-    end
-
-    local professions = ReadProfessions()
-    if professions then record.professions = professions end
-    local free, total = ReadBags()
-    -- Every character has a backpack, so no bag space at all means the
-    -- bags are not loaded yet (just after logging in), not an empty answer.
-    if free and total > 0 then
-        record.bagFree, record.bagTotal = free, total
-    end
+    ReadXP(record)
+    PARTS.professions(record)
+    ReadBagSpace(record)
 
     record.seen = time()
+    readInFull = true
     return record
 end
 
@@ -652,7 +683,7 @@ frame:SetScript("OnEvent", function(self, event, loaded)
         end
     end
     -- Reading the character must never put an error on screen.
-    if pcall(ns.Snapshot) then
+    if pcall(ns.Snapshot, ns.EVENT_PARTS[event]) then
         ns.RefreshWindow()
     end
 end)

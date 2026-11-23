@@ -85,6 +85,34 @@ end
 
 local bankOpen = false
 
+-- Item links are remembered for every item seen in the bags, so names can
+-- be shown for characters not being played. Kept only for items a
+-- character still holds, or that a recorded recipe makes or uses; the rest
+-- are dropped once per session, so the saved data does not keep growing.
+function ns.TrimItemLinks()
+    local keep = {}
+    for _, record in pairs(ns.db.chars) do
+        for id in pairs(record.bagItems or {}) do keep[id] = true end
+        for id in pairs(record.bankItems or {}) do keep[id] = true end
+    end
+    for _, book in pairs(ns.db.recipes or {}) do
+        for _, profession in pairs(book) do
+            for _, recipe in ipairs(profession.list or {}) do
+                if recipe.out then keep[recipe.out] = true end
+                for _, reagent in ipairs(recipe.reagents or {}) do keep[reagent.id] = true end
+            end
+        end
+    end
+    local dropped = 0
+    for id in pairs(ns.db.itemLinks) do
+        if not keep[id] then
+            ns.db.itemLinks[id] = nil
+            dropped = dropped + 1
+        end
+    end
+    return dropped
+end
+
 -- Reads the bags of the character being played, and the bank too while it
 -- is open.
 function ns.ReadItems()
@@ -279,6 +307,10 @@ frame:SetScript("OnEvent", function(self, event, kind)
             pcall(self.RegisterEvent, self, name)
         end
         pcall(HookTooltips)
+        -- Once the bags have been read, tidy the remembered links.
+        if C_Timer and C_Timer.After then
+            C_Timer.After(20, function() pcall(ns.TrimItemLinks) end)
+        end
     elseif event == "BANKFRAME_OPENED" then
         bankOpen = true
     elseif event == "BANKFRAME_CLOSED" then

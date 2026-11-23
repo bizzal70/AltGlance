@@ -1,5 +1,10 @@
 # AltGlance
 
+## 0.12.1
+
+- **Shorter profession names in the list** ("Herb 34, Skin 75, FA 23"), so every profession fits; hover over a character for them in full.
+- **Lighter on the game:** a change of money, experience, zone, professions or bags now reads only that, not the whole character, and links remembered for items no character holds any more are dropped once per session, so the saved data stops growing.
+
 ## 0.12.0
 
 - **Options window:** the new **Options** button in the list (or `/alts options`) gathers AltGlance's settings: the minimap button, the item tooltip counts, how old bank counts are shown, and a button that puts every AltGlance window back in the middle of the screen (if one was dragged off a small screen). It also says who your bank alt is here. With a controller, the D-pad picks a row, A changes it and B closes.

@@ -102,7 +102,7 @@ local before = #AFTERS
 Fire("PLAYER_LOGIN")
 check(#AFTERS > before, "logging in reads the character again a moment later")
 ME.money = 31000
-AFTERS[#AFTERS]()
+for i = before + 1, #AFTERS do AFTERS[i]() end
 check(me.money == 31000, "and that later read is recorded")
 ME.money = 30000; Fire("PLAYER_MONEY")
 
@@ -200,7 +200,7 @@ for _, f in ipairs(Frames()) do
     if rawget(f, "cells") and f.__shown then shown[#shown + 1] = f end
 end
 check(#shown == 3 and shown[1].cells.name.__text == "Aaron" and shown[2].cells.level.__text == "13", "one row per character, in order")
-check(shown[2].cells.professions.__text == "Mining 45, Herbalism 60" and shown[2].cells.bags.__text == "7 / 24", "showing professions and bag space")
+check(shown[2].cells.professions.__text == "Mine 45, Herb 60" and shown[2].cells.bags.__text == "7 / 24", "showing professions (short names) and bag space")
 check(shown[1].cells.seen.__text == "now" and shown[2].cells.seen.__text == "2 h ago", "and when each was last played")
 check(shown[1].cells.money.__text == "100g" and shown[3].cells.money.__text == "5s", "and their money")
 check(shown[2].cells.rested.__text:sub(1, 1) == "~", "an estimated rested figure is marked as approximate")
@@ -260,12 +260,12 @@ for slot = 1, 10 do ME.items[1][slot] = { 2771, 5 } end
 Fire("BAG_UPDATE_DELAYED")
 -- Forever's full names: first and last. Learned when a character is played.
 GetUnitName = function(unit, withRealm) return ME.name .. " " .. (ME.surname or "Stone") end
-Fire("PLAYER_MONEY")
+Fire("PLAYER_ENTERING_WORLD")
 check(ns.db.chars["Player-3"].fullName == "Aaron Stone", "the full name (first and last) is recorded")
 GetUnitName = nil
 UnitName = function() return ME.name, "Ashford" end
-Fire("PLAYER_MONEY")
-ns.db.chars["Player-3"].fullName = nil; Fire("PLAYER_MONEY")
+Fire("PLAYER_ENTERING_WORLD")
+ns.db.chars["Player-3"].fullName = nil; Fire("PLAYER_ENTERING_WORLD")
 check(ns.db.chars["Player-3"].fullName == "Aaron Ashford", "without GetUnitName, it is the first name and UnitName's second value")
 ns.db.chars["Player-3"].fullName = "Aaron Stone"
 UnitName = function() return ME.name end
@@ -302,7 +302,7 @@ do
     GetRealmName = function() return "" end
     ns.db.bankAlt["CAMWOW Realm 10|Alliance"] = "Player-77-0B"
     check(ns.BankAlt() == "Player-77-0B", "and finds the bank alt set for that realm")
-    Fire("PLAYER_MONEY")
+    Fire("PLAYER_ENTERING_WORLD")
     check(chars["Player-77-0A"].realm == nil, "an empty realm name from the game is not saved")
     UnitGUID, GetRealmName = realGuid, realRealm
     chars["Player-77-0A"], chars["Player-77-0B"], chars["Player-78-0C"] = nil, nil, nil
@@ -875,4 +875,20 @@ do
     AltGlanceMinimapButton.__scripts.OnClick(AltGlanceMinimapButton, "RightButton")
     check(AltGlancePlanner:IsShown(), "right-clicking the minimap button opens the planner")
     AltGlancePlanner:Hide()
+end
+
+-- Efficiency: an event reads only what it changes; old item links are dropped.
+do
+    local me = ns.db.chars[ns.CurrentKey()]
+    local zoneBefore = me.zone
+    ME.money, ME.zone = ME.money + 777, "Somewhere New"
+    Fire("PLAYER_MONEY")
+    check(me.money == ME.money and me.zone == zoneBefore, "a change of money reads the money, not everything")
+    Fire("ZONE_CHANGED_NEW_AREA")
+    check(me.zone == "Somewhere New", "and moving zone reads the zone")
+    ns.db.itemLinks[424242] = "|Hitem:424242|h[Long Gone]|h"
+    local heldID = next(me.bagItems or {})
+    if heldID then ns.db.itemLinks[heldID] = ns.db.itemLinks[heldID] or "|Hitem:" .. heldID .. "|h[Held]|h" end
+    check(ns.TrimItemLinks() >= 1 and ns.db.itemLinks[424242] == nil and (not heldID or ns.db.itemLinks[heldID] ~= nil),
+        "links for items nobody holds are dropped, held ones kept")
 end

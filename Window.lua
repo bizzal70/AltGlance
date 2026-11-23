@@ -97,10 +97,17 @@ local FACTIONS = {
 ns.FACTIONS = FACTIONS
 local ICON_SIZE = 16
 
+-- Short names, so every profession fits in its column ("Herb 34, Skin 75,
+-- FA 23"); the row's tooltip has them in full, with their maximum.
+local SHORT = {
+    Alchemy = "Alch", Blacksmithing = "BS", Enchanting = "Ench", Engineering = "Eng", Herbalism = "Herb",
+    Inscription = "Insc", Jewelcrafting = "JC", Leatherworking = "LW", Mining = "Mine", Skinning = "Skin",
+    Tailoring = "Tail", Cooking = "Cook", ["First Aid"] = "FA", Fishing = "Fish", Archaeology = "Arch",
+}
 local function ProfessionText(record)
     local parts = {}
     for _, profession in ipairs(record.professions or {}) do
-        parts[#parts + 1] = ("%s %d"):format(profession.name, profession.level)
+        parts[#parts + 1] = ("%s %d"):format(SHORT[profession.name] or profession.name, profession.level)
     end
     return table.concat(parts, ", ")
 end
