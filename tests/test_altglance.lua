@@ -899,3 +899,30 @@ do
     check(ns.TrimItemLinks() >= 1 and ns.db.itemLinks[424242] == nil and (not heldID or ns.db.itemLinks[heldID] ~= nil),
         "links for items nobody holds are dropped, held ones kept")
 end
+
+-- A character with nothing recorded gets a big Record button in the middle.
+do
+    local realGuid = ME.guid
+    ME.guid = "Player-5"
+    ns.db.recordTried = {}
+    if AltGlancePlanner:IsShown() then AltGlancePlanner:Hide() end
+    ns.TogglePlanner()
+    local prompt = AltGlancePlanner.recordPrompt
+    check(prompt:IsShown() and prompt.text:GetText():find("Bizz Wolf has no recipes recorded yet", 1, true) ~= nil,
+        "a character with nothing recorded is offered the big Record button: " .. tostring(prompt.text:GetText()))
+    check(prompt.button.label:GetText() == "Record my Mining (1 more)", "naming the next profession: " .. tostring(prompt.button.label:GetText()))
+    prompt.skip.__scripts.OnClick(prompt.skip)
+    check(not prompt:IsShown(), "it can be put aside to look at other characters")
+    ns.TogglePlanner(); ns.TogglePlanner()
+    check(prompt:IsShown(), "and it is back the next time the planner opens")
+    prompt.button.__scripts.OnClick(prompt.button)
+    for _ = 1, 40 do RunTimers() end
+    prompt.button.__scripts.OnClick(prompt.button)
+    for _ = 1, 40 do RunTimers() end
+    check(ns.db.recipes["Player-5"] and ns.db.recipes["Player-5"]["First Aid"] ~= nil and not prompt:IsShown()
+        and AltGlancePlanner.crafter:GetText():find("Bizz Wolf", 1, true) ~= nil,
+        "pressing it records their professions, then shows them: " .. tostring(AltGlancePlanner.crafter:GetText()))
+    ns.db.recipes["Player-5"] = nil
+    ME.guid = realGuid
+    AltGlancePlanner:Hide()
+end

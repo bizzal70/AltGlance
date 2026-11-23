@@ -528,6 +528,7 @@ local window
 local rows, reagentRows = {}, {}
 local crafters, recipes = {}, {}
 local pick = 1           -- which crafter and profession
+local promptSkipped = false   -- "Look at my other characters" pressed while this planner is open
 local offset = 0         -- scroll of the recipe list
 local selected           -- name of the chosen recipe
 local quantity = 1
@@ -764,6 +765,23 @@ local function Refresh()
         active = false
     end
     record.label:SetTextColor(active and 1 or 0.5, active and 0.85 or 0.5, active and 0.45 or 0.5)
+
+    -- The character being played has nothing recorded: a big Record button
+    -- in the middle, rather than someone else's recipes.
+    local meKey = ns.CurrentKey()
+    local hasOwn = false
+    for _, entry in ipairs(crafters) do
+        if entry.key == meKey then hasOwn = true break end
+    end
+    local prompt = window.recordPrompt
+    local showPrompt = not hasOwn and (#missing > 0 or ns.IsRecording()) and not promptSkipped
+    prompt:SetShown(showPrompt)
+    if showPrompt then
+        local me = meKey and ns.db.chars[meKey]
+        prompt.text:SetText(("%s has no recipes recorded yet."):format(me and ns.DisplayName(me) or "This character"))
+        prompt.button.label:SetText(record.label:GetText())
+        prompt.skip:SetShown(#crafters > 0)
+    end
     window.prev:SetShown(#crafters > 1)
     window.next:SetShown(#crafters > 1)
     -- The button back to the character being played: only when they have
@@ -936,7 +954,9 @@ local function CreateWindow()
     ns.PadKey(window, "PADDLEFT", function() window.prev:Click() end, 2)
     ns.PadKey(window, "PADDRIGHT", function() window.next:Click() end, 2)
     ns.PadKey(window, "PAD3", function() window.add:Click() end, 2)
-    ns.PadKey(window, "PAD4", function() window.craft:Click() end, 2)
+    ns.PadKey(window, "PAD4", function()
+        if window.recordPrompt and window.recordPrompt:IsShown() then window.recordPrompt.button:Click() else window.craft:Click() end
+    end, 2)
 
     local header = CreateFrame("Frame", nil, window)
     header:SetPoint("TOPLEFT", 1, -1)
@@ -1056,6 +1076,37 @@ local function CreateWindow()
     window.empty:SetWidth(WIDTH - 80)
     window.empty:SetWordWrap(true)
     window.empty:SetText("No recipes recorded yet.\n\nPress Record at the top on each of your characters (or open their profession windows),\nand AltGlance records what they can make.")
+
+    -- Over the list and the recipe, when the character being played has
+    -- nothing recorded: a big button to record their professions.
+    local prompt = CreateFrame("Frame", nil, window)
+    prompt:SetPoint("TOPLEFT", 1, -(LIST_TOP - 10))
+    prompt:SetPoint("BOTTOMRIGHT", -1, 50)
+    prompt:SetFrameLevel(window:GetFrameLevel() + 20)
+    prompt:EnableMouse(true)
+    Fill(prompt, 0.05, 0.05, 0.06, 0.98)
+    prompt.text = Label(prompt, ns.Font("GameFontNormalLarge"), "CENTER")
+    prompt.text:SetPoint("CENTER", 0, 70)
+    prompt.text:SetWidth(WIDTH - 80)
+    prompt.button = Button(prompt, 340, 52, "", function()
+        ns.RecordProfessions()
+        Refresh()
+    end)
+    prompt.button:SetPoint("CENTER", 0, 10)
+    prompt.button.label:SetFontObject(ns.Font("GameFontNormalLarge"))
+    prompt.button.bg:SetColorTexture(0.45, 0.30, 0.12, 1)
+    prompt.note = Label(prompt, ns.Font("GameFontDisableSmall"), "CENTER")
+    prompt.note:SetPoint("TOP", prompt.button, "BOTTOM", 0, -12)
+    prompt.note:SetWidth(WIDTH - 120)
+    prompt.note:SetWordWrap(true)
+    prompt.note:SetText("The game shows recipes only in the profession window, so each press opens one, reads it and closes it again. With a controller, press Y.")
+    prompt.skip = Button(prompt, 220, 28, "Look at my other characters", function()
+        promptSkipped = true
+        Refresh()
+    end)
+    prompt.skip:SetPoint("TOP", prompt.note, "BOTTOM", 0, -16)
+    prompt:Hide()
+    window.recordPrompt = prompt
 
     -- The chosen recipe.
     local detail = CreateFrame("Frame", nil, window)
@@ -1185,6 +1236,7 @@ function ns.TogglePlanner()
     else
         -- Always open on all recipes; the filter is for while it is open.
         ns.db.plannerFilter = "all"
+        promptSkipped = false
         -- Always open on the character being played: on the profession and
         -- recipe they were last looking at (remembered between sessions), or
         -- their first profession. Only if they have no recipes recorded, on

@@ -1,5 +1,9 @@
 # AltGlance
 
+## 0.12.3
+
+- **A character with nothing recorded gets a big Record button** in the middle of the profession planner ("Shannin Wolfbane has no recipes recorded yet."), instead of someone else's recipes. Each press records one profession; once one is recorded the planner shows it. **Look at my other characters** puts it aside until the planner is next opened. With a controller, Y presses it.
+
 ## 0.12.2
 
 - **The profession planner always opens on the character you are playing**, on the profession and recipe you were last looking at for them (remembered for each character, between sessions). Browsing another character's professions no longer makes it reopen on theirs. A character with no recipes recorded yet still opens on whatever you looked at last.
