@@ -577,6 +577,8 @@ SlashCmdList.ALTGLANCE = function(msg)
                 end
             end
         end
+    elseif command == "options" or command == "settings" or command == "config" then
+        ns.ToggleOptions()
     elseif command == "tooltip" then
         ns.db.itemTooltip = not ns.db.itemTooltip
         ns.Print("Item tooltips " .. (ns.db.itemTooltip and "show" or "no longer show") .. " how many of the item each character has.")
@@ -594,6 +596,7 @@ SlashCmdList.ALTGLANCE = function(msg)
         ns.Print("/alts - open the list of your characters")
         ns.Print("/alts find <item> - which of your characters has an item, in bags or bank")
         ns.Print("/alts prof - the profession planner: what you can make, and who holds the materials")
+        ns.Print("/alts options - the Options window")
         ns.Print("/alts tooltip - item tooltips showing each character's count, on or off")
         ns.Print("/alts bank <name> - your bank alt, whose name the mailbox fills in (/alts bank off to clear)")
         ns.Print("/alts forget <name> - remove a character you no longer have")

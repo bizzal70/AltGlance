@@ -427,6 +427,21 @@ local function CreateWindow()
     planner:SetScript("OnClick", function() ns.TogglePlanner() end)
     window.plannerButton = planner
 
+    -- Opens the Options window.
+    local options = CreateFrame("Button", nil, header)
+    options:SetSize(80, HEADER_HEIGHT - 12)
+    options:SetPoint("RIGHT", planner, "LEFT", -8, 0)
+    Fill(options, 0.16, 0.12, 0.08, 1)
+    Outline(options, 0.45)
+    local optionsHover = options:CreateTexture(nil, "HIGHLIGHT")
+    optionsHover:SetAllPoints()
+    optionsHover:SetColorTexture(1, 1, 1, 0.12)
+    local optionsLabel = Label(options, ns.Font("GameFontHighlight"), "CENTER")
+    optionsLabel:SetPoint("CENTER")
+    optionsLabel:SetText("Options")
+    options:SetScript("OnClick", function() ns.ToggleOptions() end)
+    window.optionsButton = options
+
     -- Column headings; the sortable ones are buttons.
     local x = PADDING + 8
     for _, column in ipairs(COLUMNS) do

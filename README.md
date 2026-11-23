@@ -33,7 +33,8 @@ A character appears in the list once you have logged in to them with AltGlance e
 |---|---|
 | `/alts` | Open the list |
 | `/alts find <item>` | Which of your characters has an item, in bags or bank: `/alts find linen` |
-| `/alts prof` | The profession planner (also the **Professions** button in the list) |
+| `/alts prof` | The profession planner (also the **Professions** button in the list, or right-click the minimap button) |
+| `/alts options` | The Options window (also the **Options** button in the list) |
 | `/alts tooltip` | Item tooltips showing each character's count, on or off |
 | `/alts bank <name>` | Your bank alt, whose name the mailbox fills in (`/alts bank off` to clear) |
 | `/alts forget <name>` | Remove a character you no longer have |

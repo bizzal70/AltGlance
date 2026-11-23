@@ -124,11 +124,19 @@ function ns.ItemHolders(itemID)
 end
 
 -- "12 (bags 8, bank 4)", "4 (bank)", "8"
+-- How old a character's bank count is, once it is more than a day old: the
+-- bank is only read while it is open, so it is as of their last visit.
+local function BankAge(holder)
+    local seen = holder.record and holder.record.bankSeen
+    if ns.db.bankAge == false or type(seen) ~= "number" or time() - seen < 86400 then return "" end
+    return ", " .. ns.Ago(seen)
+end
+
 function ns.HolderText(holder)
     if holder.bank > 0 and holder.bags > 0 then
-        return ("%d (bags %d, bank %d)"):format(holder.total, holder.bags, holder.bank)
+        return ("%d (bags %d, bank %d%s)"):format(holder.total, holder.bags, holder.bank, BankAge(holder))
     elseif holder.bank > 0 then
-        return ("%d (bank)"):format(holder.total)
+        return ("%d (bank%s)"):format(holder.total, BankAge(holder))
     end
     return tostring(holder.total)
 end

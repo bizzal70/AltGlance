@@ -844,3 +844,35 @@ do
     bar.thumb.__scripts.OnUpdate(bar.thumb)
     check(scrolled == 8, "dragging the handle halfway down scrolls halfway: " .. tostring(scrolled))
 end
+
+-- Options window, bank count age, minimap right-click.
+do
+    SlashCmdList.ALTGLANCE("options")
+    check(AltGlanceOptions and AltGlanceOptions:IsShown(), "/alts options opens the Options window")
+    local before = ns.db.itemTooltip
+    ns.PressOption(2)
+    check(ns.db.itemTooltip == not before, "a row turns its setting off and on")
+    ns.PressOption(2)
+    ns.db.windowPosition = { "TOP", "TOP", 0, 0 }
+    ns.PressOption(4)
+    check(ns.db.windowPosition == nil, "Put the windows back in the middle forgets where the list was dragged")
+    AltGlanceOptions:Hide()
+    AltGlanceWindow.optionsButton.__scripts.OnClick(AltGlanceWindow.optionsButton)
+    check(AltGlanceOptions:IsShown(), "the Options button in the list opens it too")
+    AltGlanceOptions:Hide()
+
+    local record = { name = "Banker", bankSeen = time() - 5 * 86400 }
+    check(ns.HolderText({ record = record, bags = 2, bank = 12, total = 14 }) == "14 (bags 2, bank 12, 5 days ago)",
+        "a bank count more than a day old says how old: " .. ns.HolderText({ record = record, bags = 2, bank = 12, total = 14 }))
+    record.bankSeen = time() - 3600
+    check(ns.HolderText({ record = record, bags = 0, bank = 12, total = 12 }) == "12 (bank)", "a fresh one does not")
+    record.bankSeen = time() - 5 * 86400
+    ns.db.bankAge = false
+    check(ns.HolderText({ record = record, bags = 0, bank = 12, total = 12 }) == "12 (bank)", "and the age can be turned off")
+    ns.db.bankAge = nil
+
+    if AltGlancePlanner:IsShown() then AltGlancePlanner:Hide() end
+    AltGlanceMinimapButton.__scripts.OnClick(AltGlanceMinimapButton, "RightButton")
+    check(AltGlancePlanner:IsShown(), "right-clicking the minimap button opens the planner")
+    AltGlancePlanner:Hide()
+end

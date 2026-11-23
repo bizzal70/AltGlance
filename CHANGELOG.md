@@ -1,5 +1,11 @@
 # AltGlance
 
+## 0.12.0
+
+- **Options window:** the new **Options** button in the list (or `/alts options`) gathers AltGlance's settings: the minimap button, the item tooltip counts, how old bank counts are shown, and a button that puts every AltGlance window back in the middle of the screen (if one was dragged off a small screen). It also says who your bank alt is here. With a controller, the D-pad picks a row, A changes it and B closes.
+- **Bank counts say how old they are:** the bank can only be read while it is open, so a count from a visit more than a day ago now says so in tooltips: "14 (bags 2, bank 12, 5 days ago)". It can be turned off in Options.
+- **Right-click the minimap button** to open the profession planner (left-click still opens the list).
+
 ## 0.11.3
 
 - **The profession planner remembers where you were:** it reopens on the character, profession and recipe you were last looking at, scrolled where you left it, even after logging out or switching characters. The button with your character's name still takes you to your own professions. (It still opens on All recipes.)
