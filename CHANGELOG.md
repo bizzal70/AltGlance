@@ -1,5 +1,9 @@
 # AltGlance
 
+## 0.12.2
+
+- **The profession planner always opens on the character you are playing**, on the profession and recipe you were last looking at for them (remembered for each character, between sessions). Browsing another character's professions no longer makes it reopen on theirs. A character with no recipes recorded yet still opens on whatever you looked at last.
+
 ## 0.12.1
 
 - **Shorter profession names in the list** ("Herb 34, Skin 75, FA 23"), so every profession fits; hover over a character for them in full.

@@ -645,12 +645,19 @@ check(ns.db.plannerFilter == "all", "and back round to all")
 AltGlancePlanner.filter.__scripts.OnClick(AltGlancePlanner.filter)
 ns.TogglePlanner(); ns.TogglePlanner()
 check(ns.db.plannerFilter == "all", "the planner always opens on all recipes")
--- It opens where you left it, even after logging out (the view is saved).
-AltGlancePlanner.next.__scripts.OnClick(AltGlancePlanner.next)
-local leftOn = AltGlancePlanner.crafter:GetText()
-local savedView = ns.db.plannerView
+-- It always opens on the character being played, even after looking at
+-- another character's profession.
+ns.db.recipes["Player-5"] = { Alchemy = { seen = time(), list = { { name = "Minor Healing Potion", reagents = { { id = 765, n = 1 } } } } } }
 ns.TogglePlanner(); ns.TogglePlanner()
-check(AltGlancePlanner.crafter:GetText() == leftOn and savedView.profession ~= nil, "the planner reopens on the profession you were looking at: " .. tostring(leftOn))
+for _ = 1, 4 do
+    if not AltGlancePlanner.crafter:GetText():find("Aaron", 1, true) then break end
+    AltGlancePlanner.next.__scripts.OnClick(AltGlancePlanner.next)
+end
+check(not AltGlancePlanner.crafter:GetText():find("Aaron", 1, true), "looking at another character's profession")
+ns.TogglePlanner(); ns.TogglePlanner()
+check(AltGlancePlanner.crafter:GetText():find("Aaron Stone", 1, true) ~= nil and ns.db.plannerViews["Player-3"] ~= nil,
+    "the planner reopens on the character being played: " .. tostring(AltGlancePlanner.crafter:GetText()))
+ns.db.recipes["Player-5"] = nil
 AltGlanceWindow.plannerButton.__scripts.OnClick(AltGlanceWindow.plannerButton)
 check(not AltGlancePlanner:IsShown(), "the Professions button in the list toggles the planner")
 AltGlanceWindow.plannerButton.__scripts.OnClick(AltGlanceWindow.plannerButton)
