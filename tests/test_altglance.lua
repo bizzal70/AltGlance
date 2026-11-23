@@ -926,3 +926,28 @@ do
     ME.guid = realGuid
     AltGlancePlanner:Hide()
 end
+
+-- The kind of realm, from its name, in its own column.
+do
+    check(ns.RealmType("CAMWOW US1 Realm 9 RP PvP") == "RP PvP", "an RP PvP realm")
+    check(ns.RealmType("CAMWOW US1 Realm 10 RP") == "RP", "an RP realm")
+    check(ns.RealmType("Some Realm PvP") == "PvP" and ns.RealmType("Realm 3 (PvE)") == "Normal" and ns.RealmType("Realm 4 Normal") == "Normal",
+        "PvP and normal realms")
+    check(ns.RealmType("Stonehold") == nil and ns.RealmType("Sharpe Realm") == nil and ns.RealmType("") == nil,
+        "a name that does not say gives no type (and 'Sharpe' or 'Realm' is not RP)")
+    local key = ns.CurrentKey()
+    local saved = {}
+    for k, record in pairs(ns.db.chars) do saved[k] = record.realm; record.realm = "CAMWOW US1 Realm 9 RP PvP" end
+    local realGetRealmName = GetRealmName
+    GetRealmName = function() return "CAMWOW US1 Realm 9 RP PvP" end
+    if not AltGlanceWindow or not AltGlanceWindow:IsShown() then ns.ToggleWindow() end
+    ns.RefreshWindow()
+    local found
+    for _, f in ipairs(Frames()) do
+        if rawget(f, "cells") and f.__shown and f.record and f.record.key == key then found = f.cells.realmType.__text end
+    end
+    check(found == "RP PvP", "the list shows the realm type: " .. tostring(found))
+    for k, record in pairs(ns.db.chars) do record.realm = saved[k] end
+    GetRealmName = realGetRealmName
+    if AltGlanceWindow:IsShown() then AltGlanceWindow:Hide() end
+end

@@ -1,5 +1,9 @@
 # AltGlance
 
+## 0.13.0
+
+- **Realm type column:** the list shows what kind of realm each character is on (**RP PvP**, **PvP**, **RP** or **Normal**), each in its own colour, read from the realm's name. Click the heading to sort by it; hover the row for the realm's full name. Blank when the realm's name does not say.
+
 ## 0.12.3
 
 - **A character with nothing recorded gets a big Record button** in the middle of the profession planner ("Shannin Wolfbane has no recipes recorded yet."), instead of someone else's recipes. Each press records one profession; once one is recorded the planner shows it. **Look at my other characters** puts it aside until the planner is next opened. With a controller, Y presses it.

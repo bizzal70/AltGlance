@@ -12,6 +12,7 @@ AltGlance keeps a line on every character on your account and shows them all in 
 |---|---|
 | Faction | Their faction's crest (Horde or Alliance). The row is faintly tinted red for the Horde, blue for the Alliance |
 | Character | Their name, in their class colour |
+| Realm | What kind of realm they are on: RP PvP, PvP, RP or Normal, in its own colour (read from the realm's name; blank if the name does not say) |
 | Level | |
 | Gold | With a total across all characters at the bottom, and each faction's own total (gold cannot cross between them) |
 | Last seen in | The zone they were in |

@@ -105,6 +105,19 @@ function ns.RealmOf(key, record)
     return best or own or ("Realm " .. server)
 end
 
+-- The kind of realm, read from its name: Forever's realm names end in it
+-- ("CAMWOW US1 Realm 9 RP PvP", "... Realm 10 RP"). nil when the name does
+-- not say.
+function ns.RealmType(realm)
+    if type(realm) ~= "string" or realm == "" then return nil end
+    local name = " " .. realm:lower():gsub("[%-_]", " ") .. " "
+    if name:find("[^%a]rp%s*pvp[^%a]") then return "RP PvP" end
+    if name:find("[^%a]pvp[^%a]") then return "PvP" end
+    if name:find("[^%a]rp[^%a]") then return "RP" end
+    if name:find("[^%a]pve[^%a]") or name:find("[^%a]normal[^%a]") then return "Normal" end
+    return nil
+end
+
 -- Whether two characters are on the same realm: by the GUID's server number
 -- when both have one, else by realm name.
 function ns.SameRealm(keyA, recordA, keyB, recordB)
@@ -506,6 +519,7 @@ local SORTS = {
     level = function(record) return record.level or 0 end,
     money = function(record) return record.money or 0 end,
     zone = function(record) return (record.zone or ""):lower() end,
+    realmType = function(record) return (ns.RealmType(ns.RealmOf(record.key, record)) or "~"):lower() end,
     rested = function(record) return (ns.Rested(record, record.isCurrent)) end,
     bags = function(record) return record.bagFree or -1 end,
     seen = function(record) return record.seen or 0 end,

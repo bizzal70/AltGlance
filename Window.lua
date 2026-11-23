@@ -13,6 +13,7 @@ local PADDING = 12
 local COLUMNS = {
     { key = "faction", label = "Faction", width = 44, sort = "faction", justify = "CENTER" },
     { key = "name", label = "Character", width = 150, sort = "name" },
+    { key = "realmType", label = "Realm", width = 58, sort = "realmType", justify = "CENTER" },
     { key = "bank", label = "Bank alt", width = 52, justify = "CENTER" },
     { key = "level", label = "Level", width = 44, sort = "level", justify = "RIGHT" },
     { key = "money", label = "Gold", width = 112, sort = "money", justify = "RIGHT" },
@@ -104,6 +105,16 @@ local SHORT = {
     Inscription = "Insc", Jewelcrafting = "JC", Leatherworking = "LW", Mining = "Mine", Skinning = "Skin",
     Tailoring = "Tail", Cooking = "Cook", ["First Aid"] = "FA", Fishing = "Fish", Archaeology = "Arch",
 }
+-- Each kind of realm in its own colour: PvP red, RP purple, Normal green.
+local REALM_COLOURS = {
+    ["RP PvP"] = { 1, 0.55, 0.75 }, PvP = { 1, 0.42, 0.38 }, RP = { 0.72, 0.6, 1 }, Normal = { 0.55, 0.9, 0.55 },
+}
+function ns.RealmTypeColor(kind)
+    local colour = REALM_COLOURS[kind or ""]
+    if colour then return colour[1], colour[2], colour[3] end
+    return 0.7, 0.7, 0.7
+end
+
 local function ProfessionText(record)
     local parts = {}
     for _, profession in ipairs(record.professions or {}) do
@@ -128,6 +139,7 @@ local CELLS = {
     level = function(record) return record.level and tostring(record.level) or "" end,
     money = function(record) return record.money and MoneyText(record.money) or "" end,
     zone = function(record) return record.zone or "" end,
+    realmType = function(record) return ns.RealmType(ns.RealmOf(record.key, record)) or "" end,
     rested = RestedText,
     professions = ProfessionText,
     bags = function(record)
@@ -156,7 +168,11 @@ local function RowOnEnter(row)
     elseif record.faction then
         GameTooltip:AddLine(record.faction, 0.7, 0.7, 0.7)
     end
-    if record.realm and record.realm ~= "" then GameTooltip:AddLine(record.realm, 0.7, 0.7, 0.7) end
+    local realm = ns.RealmOf(record.key, record)
+    if realm and realm ~= "" then
+        local kind = ns.RealmType(realm)
+        GameTooltip:AddLine(kind and ("%s  (%s realm)"):format(realm, kind) or realm, 0.7, 0.7, 0.7)
+    end
     if record.money then
         GameTooltip:AddLine(MoneyText(record.money), 1, 1, 1)
     end
@@ -299,6 +315,7 @@ local function Refresh()
                 row.cells[column.key]:SetText(CELLS[column.key](record))
             end
             row.cells.name:SetTextColor(ClassColor(record.classFile))
+            row.cells.realmType:SetTextColor(ns.RealmTypeColor(row.cells.realmType:GetText()))
             local faction = FACTIONS[record.faction or ""]
             if faction then
                 row.faction:SetTexture(faction.icon)
@@ -355,7 +372,7 @@ local function SortBy(key)
     else
         -- Names, zones and factions read best A to Z; numbers, biggest first.
         ns.db.sortBy = key
-        ns.db.sortDescending = not (key == "name" or key == "zone" or key == "faction")
+        ns.db.sortDescending = not (key == "name" or key == "zone" or key == "faction" or key == "realmType")
     end
     offset = 0
     Refresh()
